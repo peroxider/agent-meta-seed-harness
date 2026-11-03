@@ -156,7 +156,8 @@ explain a round's lineage from transcript, journal and public Task trace;
   with a different descriptor revision), and of two activation envelopes
   prepared from the same base revision the superseded one is refused
   `REVISION_CONFLICT` once the other executes while the winner replays
-  unchanged. This is
+  unchanged, and a grant request that can never be exercised (zero uses)
+  fails package validation before installation or serving impact. This is
   not generic Evolution rollback or managed State restoration.
 - The Windows CI consumer now accepts an explicit signed public package bundle,
   builds distributions/SBOM/provenance before tests, and invokes the owned

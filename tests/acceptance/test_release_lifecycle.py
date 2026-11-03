@@ -516,3 +516,29 @@ def test_superseded_activation_envelope_conflicts_and_winner_replays_idempotentl
         assert admin(data_dir, "harness", "inspect", old_id)["status"] == "INACTIVE"
         result, execution = asyncio.run(terminal_execution(data_dir, submit(data_dir, tmp_path, "normal")))
         assert_result(result, execution, version="0.1.1-dev.1", composition_id=resource["composition_id"])
+
+
+def test_impossible_grant_requests_are_refused_before_installation(tmp_path):
+    """A grant request that can never be exercised (zero uses) fails package
+    admission at validation, before any activation or serving impact."""
+    first, publisher = version_bundle(1)
+    impossible = limit_activation_grant(first, permission="capability.invoke", max_uses=0)
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        for reference, raw in impossible.artifacts.items():
+            path = tmp_path / "impossible.blob"
+            path.write_bytes(raw)
+            assert admin(data_dir, "artifact", "put", str(path), "--kind", "code")["artifact_id"] == reference
+        report = admin(data_dir, "harness", "validate", impossible.manifest_artifact_id)
+        assert report["valid"] is False, report
+        assert any(issue.startswith("grant_requests.invalid") for issue in report["issues"]), report
+        manifest = json.loads(impossible.artifacts[impossible.manifest_artifact_id])
+        failed, envelope = invoke(data_dir, "harness", "install", "--name", manifest["package_name"],
+            "--version", manifest["package_version"], impossible.manifest_artifact_id, impossible.package_artifact_id)
+        assert failed.returncode != 0 and envelope["error"]["code"] == "FAILED_PRECONDITION", envelope
+        assert envelope["error"]["message"] == "package validation failed"
+        # Serving is untouched and the healthy package still installs.
+        assert admin(data_dir, "refs")["serving_revision"] == 0
+        install_seed(data_dir, tmp_path, first)
+        asyncio.run(wait_ready(data_dir, revision=1))
+        result, execution = asyncio.run(terminal_execution(data_dir, submit(data_dir, tmp_path, "normal")))
+        assert_result(result, execution, version="0.1.0-dev.1")

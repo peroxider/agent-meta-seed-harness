@@ -213,7 +213,10 @@ descriptor revision carries a different manifest hash and is refused
 `IDEMPOTENCY_CONFLICT` ("publish a new version"), and of two activation
 envelopes prepared from the same base revision exactly one wins — the
 superseded envelope is refused `REVISION_CONFLICT` while the winner's
-receipt replays unchanged.
+receipt replays unchanged. Grant admission bounds the whole chain: a grant
+request that can never be exercised (zero uses) fails package validation
+(`grant_requests.invalid`) before installation, before activation and
+before any serving impact.
 
 Runtime ADR 041 checks uninstall references by installation ownership, including
 State owners and unsettled Effects. Unrelated serving work no longer blocks
@@ -221,9 +224,10 @@ removing a drained old package. The builder accepts explicit descriptor revision
 and validated loop policy; the package CLI exposes `--descriptor-revision`.
 The named consumer rollback cases above cover reverse-direction drain,
 grant-generation limit inheritance, the uninstall/reactivation terminal
-fault matrix, the descriptor-revision in-place-replacement prohibition and
-superseded-activation conflicts; wider crash/authority cases and release
-evidence remain required. The full S04–S07 scope remains unverified.
+fault matrix, the descriptor-revision in-place-replacement prohibition,
+superseded-activation conflicts and impossible-grant admission refusal;
+wider crash/authority cases and release evidence remain required. The full
+S04–S07 scope remains unverified.
 
 ## Independent Host contract matrix
 
