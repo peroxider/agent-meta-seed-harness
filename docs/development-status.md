@@ -146,7 +146,12 @@ explain a round's lineage from transcript, journal and public Task trace;
   rolling back to a use-limited old installation re-mints its frozen grant
   requests with the `max_uses` limit intact — one Task succeeds, the next is
   refused `AUTHORITY_DENIED` after exactly one model call, serving stays on
-  the rolled-back revision and no fallback or reactivation occurs. This is
+  the rolled-back revision and no fallback or reactivation occurs. The
+  lifecycle fault matrix is pinned: an UNINSTALLED identity cannot be
+  rollback-activated or reinstalled (`FAILED_PRECONDITION`, terminal
+  history), the currently-serving ACTIVE installation refuses uninstall, and
+  a second distinct rollback envelope mints a fresh disjoint grant generation
+  while only identical envelope bytes replay idempotently. This is
   not generic Evolution rollback or managed State restoration.
 - The Windows CI consumer now accepts an explicit signed public package bundle,
   builds distributions/SBOM/provenance before tests, and invokes the owned

@@ -366,3 +366,90 @@ def test_rollback_mints_fresh_limited_grants_and_never_falls_back_after_denial(t
         assert admin(data_dir, "harness", "inspect", old_id)["status"] == "ACTIVE"
         assert admin(data_dir, "harness", "inspect", new_id)["status"] == "INACTIVE"
         assert admin(data_dir, "refs")["serving_revision"] == 3
+
+
+def test_uninstalled_package_is_terminal_for_rollback_reinstall_and_serving_uninstall(tmp_path):
+    first, publisher = version_bundle(1)
+    second, _ = version_bundle(2)
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        old_id = install_seed(data_dir, tmp_path, first, activate=False)
+        activate_seed(data_dir, first, old_id)
+        asyncio.run(wait_ready(data_dir, revision=1))
+        new_id = install_seed(data_dir, tmp_path, second, activate=False)
+        activate_seed(data_dir, second, new_id)
+        asyncio.run(wait_ready(data_dir, revision=2))
+        admin(data_dir, "harness", "uninstall", old_id)
+        assert admin(data_dir, "harness", "inspect", old_id)["status"] == "UNINSTALLED"
+        manifest = json.loads(first.artifacts[first.manifest_artifact_id])
+        requests = json.loads(first.artifacts[manifest["grant_requests_artifact_id"]])["requests"]
+        flags = [value for request in requests for value in ("--grant", canonical_json(request).decode())]
+        # A rollback activation of the uninstalled identity is refused; the
+        # terminal UNINSTALLED history never revives.
+        failed, envelope = invoke(data_dir, "harness", "activate", old_id,
+            manifest["composition_template_artifact_id"], *flags)
+        assert failed.returncode != 0 and envelope["error"]["code"] == "FAILED_PRECONDITION", envelope
+        assert envelope["error"]["details"]["retryable_hint"] == "conditional"
+        # Reinstalling the same signed package identity is refused as well.
+        failed, envelope = invoke(data_dir, "harness", "install", "--name", manifest["package_name"],
+            "--version", manifest["package_version"], first.manifest_artifact_id, first.package_artifact_id)
+        assert failed.returncode != 0 and envelope["error"]["code"] == "FAILED_PRECONDITION", envelope
+        assert envelope["error"]["details"]["package_name"] == manifest["package_name"]
+        assert envelope["error"]["details"]["package_version"] == manifest["package_version"]
+        assert admin(data_dir, "harness", "inspect", old_id)["status"] == "UNINSTALLED"
+        # The currently-serving ACTIVE installation cannot be uninstalled out
+        # from under serving; only INSTALLED/INACTIVE installations qualify.
+        failed, envelope = invoke(data_dir, "harness", "uninstall", new_id)
+        assert failed.returncode != 0 and envelope["error"]["code"] == "FAILED_PRECONDITION", envelope
+        assert envelope["error"]["details"]["status"] == "ACTIVE"
+        assert admin(data_dir, "harness", "inspect", new_id)["status"] == "ACTIVE"
+        assert admin(data_dir, "refs")["serving_revision"] == 2
+        result, execution = asyncio.run(terminal_execution(data_dir, submit(data_dir, tmp_path, "normal")))
+        assert_result(result, execution, version="0.1.1-dev.1")
+
+
+def test_second_distinct_rollback_envelope_mints_a_fresh_generation_without_resurrection(tmp_path):
+    """Idempotency belongs to the exact envelope bytes; a newly approved
+    activation of the same package is a fresh grant generation, not a replay."""
+    from agent_meta_runtime.sdk import connect
+    first, publisher = version_bundle(1)
+    second, _ = version_bundle(2)
+    method = "agent_meta.public.v1.Harness.Activate"
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        old_id = install_seed(data_dir, tmp_path, first, activate=False)
+        original = activate_seed(data_dir, first, old_id)
+        asyncio.run(wait_ready(data_dir, revision=1))
+        served = submit(data_dir, tmp_path, "normal")
+        served_result, served_execution = asyncio.run(terminal_execution(data_dir, served))
+        assert_result(served_result, served_execution, version="0.1.0-dev.1")
+        new_id = install_seed(data_dir, tmp_path, second, activate=False)
+        activate_seed(data_dir, second, new_id)
+        asyncio.run(wait_ready(data_dir, revision=2))
+        rollback = activate_seed(data_dir, first, old_id)
+        asyncio.run(wait_ready(data_dir, revision=3))
+        distinct = prepared_activation(data_dir, first, old_id)
+        async def reactivated():
+            client = await connect(data_dir)
+            try:
+                first_resource = (await client.execute_command(method, distinct)).resource
+                # The same distinct envelope replays its own durable receipt.
+                replay_resource = (await client.execute_command(method, distinct)).resource
+                assert replay_resource == first_resource
+                assert first_resource["revision"] == 4
+                assert set(first_resource["grant_ids"]).isdisjoint(original["grant_ids"])
+                assert set(first_resource["grant_ids"]).isdisjoint(rollback["grant_ids"])
+                assert first_resource["composition_id"] != rollback["composition_id"]
+                return first_resource
+            finally:
+                await client.aclose()
+        resource = asyncio.run(reactivated())
+        asyncio.run(wait_ready(data_dir, revision=4))
+        assert admin(data_dir, "harness", "inspect", old_id)["status"] == "ACTIVE"
+        assert admin(data_dir, "harness", "inspect", new_id)["status"] == "INACTIVE"
+        assert admin(data_dir, "harness", "inspect", old_id)["manifest_artifact_id"] == first.manifest_artifact_id
+        # Confirmed work keeps its exact receipts; new Tasks still serve the
+        # same old version under the newest composition.
+        preserved = asyncio.run(terminal_execution(data_dir, served))
+        assert preserved[0]["result_artifact_id"] == served_result["result_artifact_id"]
+        result, execution = asyncio.run(terminal_execution(data_dir, submit(data_dir, tmp_path, "normal")))
+        assert_result(result, execution, version="0.1.0-dev.1", composition_id=resource["composition_id"])
+        assert execution["serving_revision"] == 4

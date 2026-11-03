@@ -199,15 +199,24 @@ the restored version, consuming the generation's single permitted use, and
 the next Task is refused `AUTHORITY_DENIED` at its first tool call after
 exactly one SUCCEEDED model invocation across the generation, with serving
 kept on the rolled-back revision, and the denial triggers no fallback or
-reactivation of either installation.
+reactivation of either installation. The fault side of the lifecycle is
+pinned too: an UNINSTALLED identity is terminal — a rollback activation and
+even a plain reinstall of the same signed package are both refused
+`FAILED_PRECONDITION` ("history never revives") — and the currently-serving
+ACTIVE installation cannot be uninstalled out from under serving. A second,
+distinct signed rollback envelope is not a replay: it re-approves the same
+old package as a fresh grant generation with disjoint grant IDs and a new
+Composition while confirmed work keeps its exact receipts; only the exact
+envelope bytes replay idempotently.
 
 Runtime ADR 041 checks uninstall references by installation ownership, including
 State owners and unsettled Effects. Unrelated serving work no longer blocks
 removing a drained old package. The builder accepts explicit descriptor revision
 and validated loop policy; the package CLI exposes `--descriptor-revision`.
-The named consumer rollback cases above cover reverse-direction drain and
-grant-generation limit inheritance; wider crash/authority cases and release
-evidence remain required. The full S04–S07 scope remains unverified.
+The named consumer rollback cases above cover reverse-direction drain,
+grant-generation limit inheritance and the uninstall/reactivation terminal
+fault matrix; wider crash/authority cases and release evidence remain
+required. The full S04–S07 scope remains unverified.
 
 ## Independent Host contract matrix
 
