@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.ampak -text
+*.whl -text
+# Preserve intentional Markdown hard breaks in frozen contract documents.
+*.md whitespace=-blank-at-eol
+# Archived contract hashes cover original bytes, including CRLF inputs.
+docs/runtime-contract/** -text whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof

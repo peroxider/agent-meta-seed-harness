@@ -1,0 +1,20 @@
+.venv*/
+wheelhouse/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+reports/
+*.key
+*.pem
+.idea/
+.vscode/
+.mypy_cache/
+.env
+.env.*
+!.env.example
+# Operator-specific authorization is local state, never a repository default.
+/docs/provider-usage-authorization.json
