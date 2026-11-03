@@ -1,6 +1,6 @@
 # CPython 3.12 / Windows AMD64
 # Prepared from explicit Runtime CI wheel; no editable/source dependency.
-agent-meta-runtime==0.1.0.dev1 --hash=sha256:8115d1de814eea5f0e7533f70cfe5977d27eaf7b59e0ef482e2b74efdf424f60
+agent-meta-runtime==0.1.0.dev1 --hash=sha256:d7b880f310db74037b3a7949e70bbe17d9d9abe68c6882a4b800e9b2726788e4
 asttokens==3.0.2 --hash=sha256:9da13157f5b28becde0bd374fc677dcd3c290614264eff096f167c469cd9f933
 build==1.6.1 --hash=sha256:ecd351a4be9d35a9eaaba244a7687143c9c7d4aea6ac964e7e7ddab20cbcf4e7
 cffi==2.1.1 --hash=sha256:f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a
