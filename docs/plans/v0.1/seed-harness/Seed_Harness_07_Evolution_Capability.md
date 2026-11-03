@@ -73,3 +73,12 @@ python scripts/check_seed_traceability.py --profile evolution
 - 无任何路径绕过`Evolution.Promote` gate直接修改serving Composition。
 - 新版本AMPAK通过S03全部门禁且支持矩阵只列实际通过的Runtime版本。
 - SH-EVO-01/02、SH-GOV-01/02通过，Runtime依赖和Backend约束全部有运行证据；fixture配置修复能力与未来自主代码演化明确区分。
+
+## 在演化梯度中的定位
+
+S07是自迭代闭环的第一层（配置修复）：开放`REWIRE`/`SET_POLICY`，确定性fixture评判，operator显式触发。后续按风险递增逐层解锁，Runtime机制不变，只新增Harness侧策略与制品：
+
+1. **S08 工具/skill制品演化**：开放`REPLACE_ARTIFACT`/`ADD_SLOT`（artifact kind白名单，不含可执行源码），触发改为失败历史驱动的事件触发（有界），确定性assertion为必要条件、真实模型metric为可选profile——见[Seed_Harness_08](Seed_Harness_08_Tool_Skill_Evolution.md)。
+2. **S09 harness代码自演化**：候选不再是Composition ChangeSet而是新AMPAK包版本，复用S03全部门禁与§41.60.5升级路径——见[Seed_Harness_09](Seed_Harness_09_Harness_Code_Evolution.md)。
+
+以下不变式贯穿全部梯度，任何一层不得放宽：Evaluator/criteria与被评对象分离且候选不得修改裁决自己的Evaluator；`Promote`/`Activate`的operator签名门禁保留；实验期间baseline serving与production State不变；失败候选fail-closed并保留证据；无递归无界的常驻自动循环。

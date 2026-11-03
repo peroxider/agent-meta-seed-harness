@@ -26,11 +26,15 @@
 | S05 | S04及工具所需Runtime能力 | Artifact/State/Scratch/确定性工具，新版本发布 |
 | S06 | S05及会话恢复所需Runtime能力 | 单Realm单活动会话与恢复，新版本发布 |
 | S07 | S06及演化所需Runtime能力 | 有界、确定性验证的改进闭环，新版本发布 |
+| S08 | S07及真实模型实验/制品演化所需Runtime能力 | 工具/skill artifact自改进（REPLACE_ARTIFACT白名单）、事件驱动有界触发、可选真实模型metric，新版本发布 |
+| S09 | S08及包候选自动化所需Runtime能力 | harness代码经新AMPAK版本与S03门禁自演化，新版本发布 |
 
-实施链为`S00 → S01 → S01A → S02 → S03 → S04 → S05 → S06 → S07`。
+实施链为`S00 → S01 → S01A → S02 → S03 → S04 → S05 → S06 → S07 → S08 → S09`。
 每一步只在自己的Runtime依赖关闭后进入产品集成；纯schema、fixture和文档可提前准备。
 S03不声称支持真实模型、业务工具、多轮会话或自迭代；后续版本累积重跑S03流程及该版本新增门禁。
 多Provider路由、并行工具、多会话并发、联网业务工具、统计显著性评估和自主修改Evaluator不属于首轮交付。
+
+自迭代按风险递增分三层解锁（详见S07"在演化梯度中的定位"）：S07配置修复（`REWIRE`/`SET_POLICY`、operator显式触发）→ S08工具/skill制品（`REPLACE_ARTIFACT`/`ADD_SLOT`白名单、事件驱动有界触发、确定性assertion必要+真实模型metric可选）→ S09 harness代码（候选为新AMPAK版本，复用S03门禁与§41.60.5升级路径）。贯穿不变式：Evaluator与被评对象分离、`Promote`/`Activate`签名门禁保留、实验不改serving、无递归无界常驻循环。
 
 ## 每一步的交接格式
 

@@ -35,6 +35,11 @@
 | SH-EVO-02 | S07/evolution | 预算/次数有界、无提升退出、克隆隔离与拒绝场景 | `tests/contract/test_evolution_policy.py` |
 | SH-GOV-01 | S07/evolution | 固定裁判、签名绑定、权限/跨包/陈旧revision拒绝 | `tests/contract/test_evolution_governance.py` |
 | SH-GOV-02 | S07/evolution | operator批准后切换、新旧包drain/卸载和可追踪Rollback | `tests/acceptance/test_evolution_release.py` |
+| SH-EVO-03 | S08/evolution+ | 失败历史事件触发→artifact候选（REPLACE_ARTIFACT/ADD_SLOT白名单）→确定性实验→Promotion | `tests/acceptance/test_evolution_tool_pipeline.py` |
+| SH-EVO-04 | S08/evolution+ | 触发窗口/冷却/数量上限、artifact kind白名单、真实模型成本预算与INVALID路径 | `tests/contract/test_evolution_artifact_policy.py` |
+| SH-GOV-03 | S08/evolution+ | agent不可签名、制品diff预览、旧值hash与evaluator独立 | `tests/contract/test_evolution_artifact_governance.py` |
+| SH-EVO-05 | S09/evolution++ | 代码候选→新AMPAK版本→S03门禁E2E→签名激活→drain/回滚 | `tests/acceptance/test_evolution_code_release.py` |
+| SH-GOV-04 | S09/evolution++ | 门禁不可豁免、候选隔离、预算上限与无常驻循环 | `tests/contract/test_evolution_code_governance.py` |
 
 ## Runtime外部证明的固定映射
 
@@ -60,10 +65,11 @@ FR-MRUN-007在Runtime文档间存在owner表述差异，Seed不自行重分类�
 | Task已terminal、会话写回前；写回后响应丢失 | 补写/确认同一结果，不重新调用模型，不重复transcript | SH-SESS-02 |
 | 外部State写入或serving切换 | 冲突显式报告；已接纳Task保持冻结revision | SH-SESS-01/SH-REL-01 |
 | 实验失败、签名陈旧或reconcile失败 | 旧serving/production State保持，证据与拒绝原因可查 | SH-EVO-02/SH-GOV-01/02 |
+| 候选制品/包未过门禁或激活失败 | 候选隔离，production serving与旧版本保持，证据可查 | SH-GOV-03/SH-GOV-04 |
 
 ## Profile判定
 
-`minimal`要求S00～S03（含S01A）及三个Runtime外部ID；`provider/tools/session/evolution`逐层累积对应需求。
+`minimal`要求S00～S03（含S01A）及三个Runtime外部ID；`provider/tools/session/evolution/evolution-artifact/evolution-code`逐层累积对应需求。
 每个扩展profile同时重跑minimal；live job与离线fake/R2 job分开，未运行live证明只能声明replay支持。
 `scripts/check_seed_traceability.py --profile <name>`检查ID唯一、测试可收集、required无skip/xfail、Runtime依赖已验证及报告hash匹配。
 支持矩阵键为Seed version × Runtime wheel hash/Contract × OS/Python × Backend × Provider/profile；仅列有实际报告的组合。
