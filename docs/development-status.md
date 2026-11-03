@@ -84,7 +84,16 @@ explain a round's lineage from transcript, journal and public Task trace;
   revocation, while any new command under the revoked grant is denied.
 - Actual daemon process-loss tests preserve confirmed model/tool results,
   counters and IDs, reconstruct history without redispatch and stop UNKNOWN
-  outcomes. Upgrade tests cover cutover, frozen confirmed-work drain, removal
+  outcomes. The envelope-level RP-05 slice (`tests/contract/test_task_replay.py`)
+  drops a committed Task.Submit response at the consumer Transport boundary and
+  kills the daemon before the Task terminal: the restarted daemon replays the
+  exact signed bytes to a byte-identical wire receipt (same Task identity and
+  serving revision), reissues the identical receipt on further replays, and
+  completes the unique terminal without a second model call; a lost Task.Wait
+  response is re-observed byte-identically, and a plain restart keeps new Tasks
+  on the frozen serving revision/Composition (only a reviewed cutover advances
+  serving).
+  Upgrade tests cover cutover, frozen confirmed-work drain, removal
   of a drained old package while the new version serves and a bad candidate
   preserving healthy serving. Cutover immediately revokes old scoped grants.
 - Public API 1.4 adds ordinary own-key Actor registration, bounded delegation

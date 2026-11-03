@@ -150,6 +150,20 @@ callback. Confirmed tool history is reconstructed in order before the next
 model call. These cases do not establish irreversible effects, hard isolation,
 the entire cancellation/fault matrix or a release compatibility declaration.
 
+`test_task_replay.py` covers the envelope-level slice of the RP-05 matrix. A
+committed `Task.Submit` response is discarded at the consumer Transport return
+boundary and the owned daemon is then killed between the confirmed model result
+and the Task terminal. The restarted daemon replays the exact signed envelope
+bytes to a wire receipt that is byte-identical to the discarded one — the same
+Task identity and serving revision — reissues the identical durable receipt on
+further replays, and completes the unique terminal from the already-confirmed
+result with no second Provider callback across daemon generations. A dropped
+`Task.Wait` response with the daemon alive is re-observed byte-identically
+through a fresh connection. A plain restart also serves brand-new Tasks under
+the same frozen serving revision and Composition — serving advances only through
+a reviewed package cutover, not process loss. These are development checkpoints;
+RP-05 stays OPEN until release evidence closes it.
+
 ## Upgrade and uninstall ownership
 
 `test_release_lifecycle.py` builds new package versions with explicit descriptor
