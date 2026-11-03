@@ -102,7 +102,7 @@ async def run_task(task, host):
 '''
 
 
-def version_bundle(revision, *, unhealthy=False):
+def version_bundle(revision, *, unhealthy=False, descriptor_revision=None):
     version = f"0.1.{revision - 1}-dev.1"
     overrides = {"agent_meta_seed_harness/providers/fake.py": PROVIDER.replace(b"__PACKAGE_VERSION__", version.encode()),
         "agent_meta_seed_harness/loop.py": LOOP}
@@ -111,7 +111,8 @@ def version_bundle(revision, *, unhealthy=False):
         assert b'HealthStatus("READY", "OFFLINE_ADAPTER_READY")' in binding
         overrides["agent_meta_seed_harness/host_binding.py"] = binding.replace(
             b'HealthStatus("READY", "OFFLINE_ADAPTER_READY")', b'HealthStatus("UNHEALTHY", "SELF_TEST_FAILED")')
-    return seed_bundle(overrides=overrides, version=version, descriptor_revision=revision)
+    return seed_bundle(overrides=overrides, version=version,
+        descriptor_revision=descriptor_revision or revision)
 
 
 def submit(data_dir, root, scenario):
@@ -453,3 +454,65 @@ def test_second_distinct_rollback_envelope_mints_a_fresh_generation_without_resu
         result, execution = asyncio.run(terminal_execution(data_dir, submit(data_dir, tmp_path, "normal")))
         assert_result(result, execution, version="0.1.0-dev.1", composition_id=resource["composition_id"])
         assert execution["serving_revision"] == 4
+
+
+def test_same_identity_conflicting_descriptor_revision_cannot_replace_in_place(tmp_path):
+    """禁止原地替换包: a valid signed bundle with the same name/version but a
+    different descriptor revision is a different hash and cannot be installed
+    over the existing installation identity."""
+    conflicting, _ = version_bundle(1, descriptor_revision=2)
+    first, publisher = version_bundle(1)
+    assert conflicting.manifest_artifact_id != first.manifest_artifact_id
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        # The conflicting bundle is a fully valid signed package on its own.
+        for reference, raw in conflicting.artifacts.items():
+            path = tmp_path / "conflicting.blob"
+            path.write_bytes(raw)
+            assert admin(data_dir, "artifact", "put", str(path), "--kind", "code")["artifact_id"] == reference
+        assert admin(data_dir, "harness", "validate", conflicting.manifest_artifact_id)["valid"]
+        install_seed(data_dir, tmp_path, first)
+        asyncio.run(wait_ready(data_dir, revision=1))
+        manifest = json.loads(conflicting.artifacts[conflicting.manifest_artifact_id])
+        failed, envelope = invoke(data_dir, "harness", "install", "--name", manifest["package_name"],
+            "--version", manifest["package_version"], conflicting.manifest_artifact_id, conflicting.package_artifact_id)
+        assert failed.returncode != 0 and envelope["error"]["code"] == "IDEMPOTENCY_CONFLICT", envelope
+        assert envelope["error"]["details"]["package_name"] == manifest["package_name"]
+        assert envelope["error"]["details"]["package_version"] == manifest["package_version"]
+        assert admin(data_dir, "refs")["serving_revision"] == 1
+        result, execution = asyncio.run(terminal_execution(data_dir, submit(data_dir, tmp_path, "normal")))
+        assert_result(result, execution, version="0.1.0-dev.1")
+
+
+def test_superseded_activation_envelope_conflicts_and_winner_replays_idempotently(tmp_path):
+    """Two envelopes prepared from the same base revision: exactly one wins,
+    the loser conflicts, and the winner's receipt replays unchanged."""
+    from agent_meta_runtime.sdk import ErrorCode, StableError
+    first, publisher = version_bundle(1)
+    second, _ = version_bundle(2)
+    method = "agent_meta.public.v1.Harness.Activate"
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        old_id = install_seed(data_dir, tmp_path, first, activate=False)
+        activate_seed(data_dir, first, old_id)
+        asyncio.run(wait_ready(data_dir, revision=1))
+        new_id = install_seed(data_dir, tmp_path, second, activate=False)
+        winner = prepared_activation(data_dir, second, new_id)
+        loser = prepared_activation(data_dir, second, new_id)
+        async def race():
+            client = await connect(data_dir)
+            try:
+                resource = (await client.execute_command(method, winner)).resource
+                with pytest.raises(StableError) as error:
+                    await client.execute_command(method, loser)
+                assert error.value.code == ErrorCode.REVISION_CONFLICT, error.value
+                receipt = (await client.execute_command(method, winner)).resource
+                assert receipt == resource
+                return resource
+            finally:
+                await client.aclose()
+        resource = asyncio.run(race())
+        asyncio.run(wait_ready(data_dir, revision=2))
+        assert resource["revision"] == 2
+        assert admin(data_dir, "harness", "inspect", new_id)["status"] == "ACTIVE"
+        assert admin(data_dir, "harness", "inspect", old_id)["status"] == "INACTIVE"
+        result, execution = asyncio.run(terminal_execution(data_dir, submit(data_dir, tmp_path, "normal")))
+        assert_result(result, execution, version="0.1.1-dev.1", composition_id=resource["composition_id"])

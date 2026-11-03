@@ -151,7 +151,12 @@ explain a round's lineage from transcript, journal and public Task trace;
   rollback-activated or reinstalled (`FAILED_PRECONDITION`, terminal
   history), the currently-serving ACTIVE installation refuses uninstall, and
   a second distinct rollback envelope mints a fresh disjoint grant generation
-  while only identical envelope bytes replay idempotently. This is
+  while only identical envelope bytes replay idempotently. In-place package
+  replacement is refused (`IDEMPOTENCY_CONFLICT` for the same name/version
+  with a different descriptor revision), and of two activation envelopes
+  prepared from the same base revision the superseded one is refused
+  `REVISION_CONFLICT` once the other executes while the winner replays
+  unchanged. This is
   not generic Evolution rollback or managed State restoration.
 - The Windows CI consumer now accepts an explicit signed public package bundle,
   builds distributions/SBOM/provenance before tests, and invokes the owned

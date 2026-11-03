@@ -207,16 +207,23 @@ ACTIVE installation cannot be uninstalled out from under serving. A second,
 distinct signed rollback envelope is not a replay: it re-approves the same
 old package as a fresh grant generation with disjoint grant IDs and a new
 Composition while confirmed work keeps its exact receipts; only the exact
-envelope bytes replay idempotently.
+envelope bytes replay idempotently. In-place replacement is impossible: a
+fully valid signed bundle with the same name/version but a different
+descriptor revision carries a different manifest hash and is refused
+`IDEMPOTENCY_CONFLICT` ("publish a new version"), and of two activation
+envelopes prepared from the same base revision exactly one wins — the
+superseded envelope is refused `REVISION_CONFLICT` while the winner's
+receipt replays unchanged.
 
 Runtime ADR 041 checks uninstall references by installation ownership, including
 State owners and unsettled Effects. Unrelated serving work no longer blocks
 removing a drained old package. The builder accepts explicit descriptor revision
 and validated loop policy; the package CLI exposes `--descriptor-revision`.
 The named consumer rollback cases above cover reverse-direction drain,
-grant-generation limit inheritance and the uninstall/reactivation terminal
-fault matrix; wider crash/authority cases and release evidence remain
-required. The full S04–S07 scope remains unverified.
+grant-generation limit inheritance, the uninstall/reactivation terminal
+fault matrix, the descriptor-revision in-place-replacement prohibition and
+superseded-activation conflicts; wider crash/authority cases and release
+evidence remain required. The full S04–S07 scope remains unverified.
 
 ## Independent Host contract matrix
 
