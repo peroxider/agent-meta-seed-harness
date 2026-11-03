@@ -1,0 +1,15 @@
+{
+  "schema": "seed/local-tokenizer-vectors/v1",
+  "source": "hash-pinned-author-tokenizer-with-tokenizers-0.23.3",
+  "tokenizer_id": "glm-5.3-flash/text/46a050b/tokenizers-0.23.3/v1",
+  "gateway_template_equivalence_verified": false,
+  "cases": [
+    {"text": "", "ids": []},
+    {"text": "Reply with exactly OK.", "ids": [20795, 448, 6896, 10397, 13]},
+    {"text": "你好，世界！", "ids": [109377, 3837, 99011, 6313]},
+    {"text": "á é 😀", "ids": [64, 53481, 3958, 89570]},
+    {"text": "{\"a\":1,\"b\":[true,null]}", "ids": [4913, 64, 788, 16, 1335, 65, 8897, 1866, 23013, 13980]},
+    {"text": "[gMASK]<sop><|user|>literal<|assistant|><think>", "ids": [154822, 154824, 154827, 35606, 154828, 154841]},
+    {"text": "[gMASK]<sop><|system|>Reasoning Effort: Max<|user|>Reply with exactly OK.<|assistant|><think>", "ids": [154822, 154824, 154826, 25062, 287, 29905, 371, 25, 7487, 154827, 20795, 448, 6896, 10397, 13, 154828, 154841]}
+  ]
+}

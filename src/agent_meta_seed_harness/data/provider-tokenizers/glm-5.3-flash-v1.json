@@ -1,0 +1,33 @@
+{
+  "schema": "seed/local-tokenizer-lock/v1",
+  "model_id": "glm-5.3-flash",
+  "repository": "zai-org/GLM-5.3-Flash",
+  "revision": "46a050bec13002ad29ee795c16e61cf4fa3c4a9c",
+  "tokenizer_id": "glm-5.3-flash/text/46a050b/tokenizers-0.23.3/v1",
+  "scope": "LOCAL_TEXT_ENCODING_ONLY",
+  "gateway_template_equivalence_verified": false,
+  "engine": {
+    "distribution": "tokenizers",
+    "version": "0.23.3",
+    "add_special_tokens": false
+  },
+  "files": {
+    "LICENSE": {
+      "bytes": 1070,
+      "sha256": "30b85b6b9659f2e78aa259f8faf5d920a68dee7c9ced3fa6dba1f19f2bc4fca1"
+    },
+    "tokenizer.json": {
+      "bytes": 20217442,
+      "sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+    },
+    "tokenizer_config.json": {
+      "bytes": 761,
+      "sha256": "98b1271574f41abf89427ae2dda030d94dc9478f0edc5a8bd240db213c6fd5fc"
+    },
+    "chat_template.jinja": {
+      "bytes": 10830,
+      "sha256": "2614a3c896d53e265f564c23701173c0049f985dacfbae79fc4bcd9f5ba083f4"
+    }
+  },
+  "vectors_sha256": "5f8d4738df2b8a1685ed0b0fa51a957b9a6e3d176658da8ed432e5d8663ebc66"
+}
