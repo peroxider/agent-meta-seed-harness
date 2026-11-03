@@ -109,8 +109,29 @@ exact replay. It never dispatches a Task or reads private storage.
 The redaction canary separately proves that changed command bytes are refused
 before recovery can execute a command.
 
-The required `test_session_consistency.py` and `test_session_recovery.py` gates
-remain absent. Task/receipt/writeback crash recovery, input redaction receipts,
-frozen Context integration, summary replay, cancellation/failure/UNKNOWN,
-upgrade preservation and release evidence remain required. Passing document
-preparation tests does not close SH-SESS-01/02, RP-05 or the session profile.
+`tests/session_runtime.py` now implements the plan's message protocol as a
+consumer-side coordinator over public SDK State CAS and exact signed commands:
+reserve pending before dispatch, journal the signed bytes before Task.Submit,
+write the receipt back, wait for the committed terminal, register the writeback
+journal entry, then append the message once and clear pending. It never
+regenerates a command identity. `test_session_consistency.py` drives this
+coordinator against a real daemon with real Tasks and proves, per message:
+identical retry recovers the original operation without a new Task, a different
+input for the same message identity is a conflict, concurrent admission while a
+message is pending is refused, journal registration does not move the
+transcript CAS and the exact signed bytes plus SHA-256 are retained and replay
+idempotently, the model projection's `task_input` body is exactly the current
+input with no pending/journal/signature control fields, an external transcript
+CAS conflict stops the round with no merge, append or redispatch (and the
+diverged journal then fails closed), summary provenance commits against real
+committed history at a real source revision, and both rounds' Tasks run under
+one frozen serving revision/composition. Terminal status is taken from
+Task.Wait only; the pending item never carries terminal fields.
+
+The required `test_session_recovery.py` gate (SH-SESS-02) remains absent.
+Per-point kill/restart recovery across pending/submit/receipt/terminal/
+writeback, input redaction receipts, frozen Context integration of committed
+history and summaries (the model input still carries only the current
+message), cancellation/failure/UNKNOWN outcomes, upgrade preservation and
+release evidence remain required. Passing consistency tests does not close
+SH-SESS-01's release evidence, SH-SESS-02, RP-05 or the session profile.
