@@ -46,6 +46,13 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   succession. Host tests cover frozen
   DTOs, task-free health, unissued calls/projections/terminals, expired deadlines,
   active-call timeout/cancellation and scoped activation-grant exhaustion.
+- The signed tools package covers the S05 operation matrix: artifact.put
+  replays the same content-addressed receipt for an identical payload and an
+  oversized workload is refused at admission before any invocation;
+  seed.transform refuses input-schema violations before dispatch and duplicate
+  JSON fields as a declared INVALID_ARGUMENT; state writes stay CAS-guarded
+  with per-operation refusal codes, bounded artifact reads and redaction as
+  recorded below.
 - Public inspection returns bounded Task/Invocation/projection metadata and
   ordinary Artifact content with independent size/hash verification. It does
   not expose Restricted content or native objects. Literal zero deadlines and

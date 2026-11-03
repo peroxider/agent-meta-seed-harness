@@ -5,7 +5,7 @@ import json
 import pytest
 
 from agent_meta_runtime.sdk import connect
-from agent_meta_runtime.sdk.packages import decode_package
+from agent_meta_runtime.sdk.packages import canonical_json, decode_package, sha256_hex
 from agent_meta_seed_harness.packaging import TOOLS_EXECUTION_SOURCE_PATHS
 from agent_meta_seed_harness.toolset import OPERATIONS
 from seed_package import seed_bundle
@@ -73,5 +73,48 @@ def test_tools_refuse_undeclared_invalid_conflicting_or_unscoped_effects(tmp_pat
                 assert current['cas_revision'] == 1 and current['state_revision_id'] == state['state_revision_id']
             finally:
                 await task_client.aclose()
+                await client.aclose()
+        asyncio.run(run())
+
+
+def test_artifact_put_replays_same_payload_receipt_and_refuses_over_boundary(tmp_path):
+    with tools_environment(tmp_path) as (owner, actor, state, replacement):
+        async def run():
+            client = await connect(owner.data_dir, authority=actor)
+            try:
+                value = {'answer':42, 'secret':'PUT_CANARY'}
+                task, terminal, execution = await submit_tools(client, actor, [
+                    {'name':'seed.artifact.put','arguments':{'value':value}},
+                    {'name':'seed.artifact.put','arguments':{'value':value}}])
+                assert terminal['status'] == 'SUCCEEDED', terminal
+                left = json.loads(await client.get_artifact_content(execution['invocations'][1]['output_artifact_id']))
+                right = json.loads(await client.get_artifact_content(execution['invocations'][2]['output_artifact_id']))
+                assert left == right and left['size_bytes'] == len(canonical_json({'answer':42, 'secret':'[REDACTED]'}))
+                assert left['sha256'] == sha256_hex(canonical_json({'answer':42, 'secret':'[REDACTED]'}))
+                assert json.loads(await client.get_artifact_content(left['artifact_id'])) == {'answer':42, 'secret':'[REDACTED]'}
+                _, boundary, execution = await submit_tools(client, actor, [
+                    {'name':'seed.artifact.put','arguments':{'value':{'blob':'x'*1048576}}}])
+                assert boundary['status'] == 'FAILED' and boundary['error'] == 'FAILED_PRECONDITION', boundary
+                assert execution['invocations'] == []
+            finally:
+                await client.aclose()
+        asyncio.run(run())
+
+
+@pytest.mark.parametrize('json_argument,error,capability', [(42, 'INVALID_RESULT', False), ('{"a":1,"a":2}', 'INVALID_ARGUMENT', True)])
+def test_transform_refuses_schema_violations_and_duplicate_json_fields(tmp_path, json_argument, error, capability):
+    with tools_environment(tmp_path) as (owner, actor, state, replacement):
+        async def run():
+            client = await connect(owner.data_dir, authority=actor)
+            try:
+                _, terminal, execution = await submit_tools(client, actor, [
+                    {'name':'seed.transform.normalize_json','arguments':{'json':json_argument}}])
+                assert terminal['status'] == 'FAILED' and terminal['error'] == error, terminal
+                kinds = ['MODEL', 'CAPABILITY'] if capability else ['MODEL']
+                assert [row['kind'] for row in execution['invocations']] == kinds
+                if capability:
+                    assert execution['invocations'][1]['status'] == 'FAILED'
+                    assert execution['invocations'][1]['output_artifact_id'] is None
+            finally:
                 await client.aclose()
         asyncio.run(run())
