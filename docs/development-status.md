@@ -140,8 +140,14 @@ explain a round's lineage from transcript, journal and public Task trace;
   installed package with a fresh Composition and grant generation. Both Host
   profiles reject a stale plan, replay the exact committed activation response
   after response loss and a real owner restart, preserve historical confirmed
-  work, and refuse reactivation of an uninstalled package. This is not generic
-  Evolution rollback or managed State restoration.
+  work, and refuse reactivation of an uninstalled package. Named consumer
+  rollback proofs extend this: a Task mid-flight under the NEW version drains
+  frozen under its v2 Composition while the old version resumes serving, and
+  rolling back to a use-limited old installation re-mints its frozen grant
+  requests with the `max_uses` limit intact — one Task succeeds, the next is
+  refused `AUTHORITY_DENIED` after exactly one model call, serving stays on
+  the rolled-back revision and no fallback or reactivation occurs. This is
+  not generic Evolution rollback or managed State restoration.
 - The Windows CI consumer now accepts an explicit signed public package bundle,
   builds distributions/SBOM/provenance before tests, and invokes the owned
   prebuilt consumer producer. The release job consumes its exact evidence

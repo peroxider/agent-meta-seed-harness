@@ -10,7 +10,7 @@ from agent_meta_runtime.sdk.host import JsonPart, TerminalResult, encode_termina
 from agent_meta_runtime.sdk.packages import canonical_json, sha256_hex
 
 from recovery_runtime import terminal_execution, wait_invocations
-from seed_package import activate_seed, install_seed, seed_bundle, wait_ready
+from seed_package import activate_seed, install_seed, limit_activation_grant, seed_bundle, wait_ready
 from seed_runtime import admin, running_daemon
 from seed_runtime import daemon_process
 from seed_runtime import invoke
@@ -296,4 +296,73 @@ def test_approved_package_rollback_renews_grants_and_replays_lost_activation_aft
         failed, envelope = invoke(data_dir, "harness", "activate", new_id, manifest["composition_template_artifact_id"], *flags)
         assert failed.returncode != 0 and envelope["error"]["code"] == "FAILED_PRECONDITION", envelope
         assert admin(data_dir, "harness", "inspect", new_id)["status"] == "UNINSTALLED"
+        assert admin(data_dir, "refs")["serving_revision"] == 3
+
+
+def test_rollback_drains_midflight_new_version_task_under_frozen_composition(tmp_path):
+    first, publisher = version_bundle(1)
+    second, _ = version_bundle(2)
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        old_id = install_seed(data_dir, tmp_path, first, activate=False)
+        activate_seed(data_dir, first, old_id)
+        asyncio.run(wait_ready(data_dir, revision=1))
+        new_id = install_seed(data_dir, tmp_path, second, activate=False)
+        activate_seed(data_dir, second, new_id)
+        asyncio.run(wait_ready(data_dir, revision=2))
+        flight_task = submit(data_dir, tmp_path, "slow")
+        frozen = asyncio.run(wait_invocations(data_dir, flight_task,
+            statuses=["SUCCEEDED", "SUCCEEDED", "SUCCEEDED"]))
+        # The rollback activates the old package while the new-version Task
+        # is still between its confirmed results and its terminal.
+        activate_seed(data_dir, first, old_id)
+        asyncio.run(refs_at(data_dir, serving=3))
+        result, execution = asyncio.run(terminal_execution(data_dir, flight_task))
+        assert_result(result, execution, version="0.1.1-dev.1",
+            composition_id=frozen["serving_composition_id"])
+        assert execution["accepted_meta_revision"] == frozen["accepted_meta_revision"]
+        result, execution = asyncio.run(terminal_execution(data_dir,
+            submit(data_dir, tmp_path, "normal")))
+        assert_result(result, execution, version="0.1.0-dev.1")
+        assert execution["serving_revision"] == 3
+        assert execution["serving_composition_id"] != frozen["serving_composition_id"]
+
+
+def test_rollback_mints_fresh_limited_grants_and_never_falls_back_after_denial(tmp_path):
+    from agent_meta_runtime.sdk import connect
+    first, publisher = version_bundle(1)
+    limited = limit_activation_grant(first, permission="capability.invoke", max_uses=1)
+    second, _ = version_bundle(2)
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        old_id = install_seed(data_dir, tmp_path, limited, activate=False)
+        activate_seed(data_dir, limited, old_id)
+        asyncio.run(wait_ready(data_dir, revision=1))
+        new_id = install_seed(data_dir, tmp_path, second, activate=False)
+        activate_seed(data_dir, second, new_id)
+        asyncio.run(wait_ready(data_dir, revision=2))
+        # Rollback re-mints the old package's frozen grant requests as a new
+        # generation — limits included, nothing resurrected or widened.
+        activate_seed(data_dir, limited, old_id)
+        asyncio.run(refs_at(data_dir, serving=3))
+        drained = submit(data_dir, tmp_path, "normal")
+        result, execution = asyncio.run(terminal_execution(data_dir, drained))
+        assert_result(result, execution, version="0.1.0-dev.1")
+        assert execution["serving_revision"] == 3
+        denied = submit(data_dir, tmp_path, "normal")
+        async def refused():
+            client = await connect(data_dir)
+            try:
+                result, terminal = await client.wait_task(denied, timeout_s=10)
+                assert terminal and result["status"] == "FAILED", result
+                assert result["error"] == "AUTHORITY_DENIED", result
+                after = await client.get_task_execution(denied)
+                assert [item["status"] for item in after["invocations"]] == ["SUCCEEDED"]
+                assert after["consumed_budget"]["model_calls"] == 1
+                assert (await client.get_refs())["serving_revision"] == 3
+            finally:
+                await client.aclose()
+        asyncio.run(refused())
+        # The denial never triggers a fallback or reactivation: the rolled
+        # back package keeps serving with its own exhausted grant generation.
+        assert admin(data_dir, "harness", "inspect", old_id)["status"] == "ACTIVE"
+        assert admin(data_dir, "harness", "inspect", new_id)["status"] == "INACTIVE"
         assert admin(data_dir, "refs")["serving_revision"] == 3

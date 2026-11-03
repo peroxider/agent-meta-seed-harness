@@ -188,14 +188,26 @@ continues serving. An unhealthy next candidate leaves the healthy serving
 version usable. A separate case checks that cutover's immediate scoped-grant
 revocation denies the old Task's next tool call; it cannot use a new installation
 grant or bootstrap Root authority. Confirmed work can drain without obtaining
-another effect authorization.
+another effect authorization. The rollback direction is now proven from the
+consumer side as well: activating the old installation while a Task is
+mid-flight under the NEW version drains that Task frozen under its v2
+Composition/meta revision, advances serving to the rolled-back package, and
+new Tasks execute the old version under a fresh Composition. Rolling back to
+a use-limited old installation re-mints its frozen grant requests as a new
+generation with the `max_uses` limit intact — the first Task succeeds under
+the restored version, consuming the generation's single permitted use, and
+the next Task is refused `AUTHORITY_DENIED` at its first tool call after
+exactly one SUCCEEDED model invocation across the generation, with serving
+kept on the rolled-back revision, and the denial triggers no fallback or
+reactivation of either installation.
 
 Runtime ADR 041 checks uninstall references by installation ownership, including
 State owners and unsettled Effects. Unrelated serving work no longer blocks
 removing a drained old package. The builder accepts explicit descriptor revision
 and validated loop policy; the package CLI exposes `--descriptor-revision`.
-Independent rollback, wider crash/authority cases and release evidence remain
-required. The full S04–S07 scope remains unverified.
+The named consumer rollback cases above cover reverse-direction drain and
+grant-generation limit inheritance; wider crash/authority cases and release
+evidence remain required. The full S04–S07 scope remains unverified.
 
 ## Independent Host contract matrix
 
