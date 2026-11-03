@@ -1,0 +1,281 @@
+{
+  "requirements": [
+    {
+      "evidence": null,
+      "id": "SH-BOOT-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_project_boundary.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-PKG-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_package_contract.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-HOST-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_public_imports.py",
+        "tests/contract/test_host_contract.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-HOST-02",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/acceptance/test_host_bootstrap.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-LOOP-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_loop_semantics.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-CTX-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_context_projection.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-TOOL-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_tool_dispatch.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-REC-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_host_recovery.py",
+        "tests/contract/test_loop_recovery.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-REL-01",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/acceptance/test_release_lifecycle.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-REL-02",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_release_evidence.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "NFR-M48",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_nfr_m48.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "AC-M17",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/acceptance/test_ac_m17.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "AC-M48",
+      "profile": "minimal",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/acceptance/test_ac_m48.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-PROV-01",
+      "profile": "provider",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_provider_contract.py",
+        "tests/contract/test_provider_package.py",
+        "tests/contract/test_provider_host_binding.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-PROV-02",
+      "profile": "provider",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_provider_security.py",
+        "tests/contract/test_provider_replay.py",
+        "tests/contract/test_provider_recovery.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-PROV-03",
+      "profile": "provider",
+      "status": "PLANNED",
+      "tests": [
+        "tests/acceptance/test_live_provider.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-CAP-01",
+      "profile": "tools",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_capability_toolset.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-CAP-02",
+      "profile": "tools",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/acceptance/test_capability_toolset.py",
+        "tests/acceptance/test_scratch_tools.py",
+        "tests/acceptance/test_scratch_recovery.py",
+        "tests/acceptance/test_scratch_retirement.py",
+        "tests/acceptance/test_scratch_backup.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-SESS-01",
+      "profile": "session",
+      "status": "IN_PROGRESS",
+      "tests": [
+        "tests/contract/test_session_consistency.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-SESS-02",
+      "profile": "session",
+      "status": "PLANNED",
+      "tests": [
+        "tests/acceptance/test_session_recovery.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-EVO-01",
+      "profile": "evolution",
+      "status": "PLANNED",
+      "tests": [
+        "tests/acceptance/test_evolution_pipeline.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-EVO-02",
+      "profile": "evolution",
+      "status": "PLANNED",
+      "tests": [
+        "tests/contract/test_evolution_policy.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-GOV-01",
+      "profile": "evolution",
+      "status": "PLANNED",
+      "tests": [
+        "tests/contract/test_evolution_governance.py"
+      ]
+    },
+    {
+      "evidence": null,
+      "id": "SH-GOV-02",
+      "profile": "evolution",
+      "status": "PLANNED",
+      "tests": [
+        "tests/acceptance/test_evolution_release.py"
+      ]
+    }
+  ],
+  "runtime_dependencies": [
+    {
+      "consumer_profile": "minimal",
+      "evidence": null,
+      "id": "RP-00",
+      "status": "OPEN"
+    },
+    {
+      "consumer_profile": "minimal",
+      "evidence": null,
+      "id": "RP-01",
+      "status": "OPEN"
+    },
+    {
+      "consumer_profile": "minimal",
+      "evidence": null,
+      "id": "RP-02",
+      "status": "OPEN"
+    },
+    {
+      "consumer_profile": "provider",
+      "evidence": null,
+      "id": "RP-03",
+      "status": "OPEN"
+    },
+    {
+      "consumer_profile": "tools",
+      "evidence": null,
+      "id": "RP-04",
+      "status": "OPEN"
+    },
+    {
+      "consumer_profile": "session",
+      "evidence": null,
+      "id": "RP-05",
+      "status": "OPEN"
+    },
+    {
+      "consumer_profile": "evolution",
+      "evidence": null,
+      "id": "RP-06",
+      "status": "OPEN"
+    },
+    {
+      "consumer_profile": "evolution",
+      "evidence": null,
+      "id": "RP-07",
+      "status": "OPEN"
+    }
+  ],
+  "schema": "seed-traceability/v1"
+}

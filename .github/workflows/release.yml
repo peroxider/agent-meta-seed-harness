@@ -1,0 +1,50 @@
+name: Seed release gate
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        required: true
+        type: choice
+        options: [minimal, provider, tools, session, evolution]
+      evidence_run_id:
+        description: Completed owned consumer CI run containing the wheelhouse and reviewed evidence
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - uses: actions/download-artifact@v4
+        with:
+          name: seed-consumer-evidence
+          path: .
+          run-id: ${{ inputs.evidence_run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: seed-wheelhouse-windows-cp312
+          path: wheelhouse
+          run-id: ${{ inputs.evidence_run_id }}
+          github-token: ${{ github.token }}
+      - shell: pwsh
+        env:
+          SEED_PROFILE: ${{ inputs.profile }}
+          PIP_NO_INDEX: '1'
+        run: |
+          python -m pip install --no-index --find-links wheelhouse --require-hashes -r requirements-ci.lock
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install --no-index --no-deps dist/agent_meta_seed_harness-0.1.0.dev1-py3-none-any.whl
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/build_release.py --profile $env:SEED_PROFILE
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: seed-release-candidate
+          path: dist/

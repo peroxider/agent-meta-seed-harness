@@ -1,0 +1,123 @@
+name: Seed offline consumer
+on:
+  workflow_dispatch:
+    inputs:
+      runtime_repository:
+        description: Explicit repository owning the Runtime CI artifact
+        required: true
+        type: string
+      runtime_run_id:
+        description: Completed Runtime CI run ID
+        required: true
+        type: string
+      runtime_sha256:
+        description: SHA-256 of the pinned Runtime wheel
+        required: true
+        type: string
+      package_repository:
+        description: Explicit repository owning the public signed package artifact
+        required: true
+        type: string
+      package_run_id:
+        description: Completed run containing seed-package-bundle (bundle.json and artifacts/)
+        required: true
+        type: string
+      evidence_kind:
+        description: Release evidence also requires committed approved publisher policy
+        required: true
+        default: development
+        type: choice
+        options: [development, release]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-wheel
+          path: runtime-input
+          repository: ${{ inputs.runtime_repository }}
+          run-id: ${{ inputs.runtime_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download exact committed hash-locked wheels
+        shell: pwsh
+        env:
+          RUNTIME_SHA256: ${{ inputs.runtime_sha256 }}
+        run: |
+          $wheels = @(Get-ChildItem runtime-input -Filter *.whl)
+          if ($wheels.Count -ne 1) { throw 'Expected exactly one Runtime wheel' }
+          python scripts/prepare_ci.py --runtime-wheel $wheels[0].FullName --runtime-sha256 $env:RUNTIME_SHA256
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: seed-wheelhouse-windows-cp312
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+  verify:
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - uses: actions/download-artifact@v4
+        with:
+          name: seed-wheelhouse-windows-cp312
+          path: wheelhouse
+      - uses: actions/download-artifact@v4
+        with:
+          name: seed-package-bundle
+          path: package-input
+          repository: ${{ inputs.package_repository }}
+          run-id: ${{ inputs.package_run_id }}
+          github-token: ${{ github.token }}
+      - name: Install locked dependencies and deny Python outbound traffic
+        shell: pwsh
+        env:
+          PIP_NO_INDEX: '1'
+        run: |
+          python -m venv .venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $python = (Resolve-Path .venv/Scripts/python.exe).Path
+          # Windows venv's redirector can execute the base interpreter.
+          $basePython = & $python -I -c "import sys; print(sys._base_executable)"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($program in @($python, $basePython) | Select-Object -Unique) {
+            New-NetFirewallRule -DisplayName SeedOfflinePython -Direction Outbound -Program $program -Action Block -ErrorAction Stop | Out-Null
+          }
+          & $python -m pip install --no-index --find-links wheelhouse --require-hashes -r requirements-ci.lock
+          exit $LASTEXITCODE
+      - name: Build once and run the owned prebuilt consumer
+        shell: pwsh
+        env:
+          PIP_NO_INDEX: '1'
+          SEED_EVIDENCE_KIND: ${{ inputs.evidence_kind }}
+        run: |
+          $python = (Resolve-Path .venv/Scripts/python.exe).Path
+          & $python scripts/build_development.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $python -m pip install --no-index --no-deps dist/agent_meta_seed_harness-0.1.0.dev1-py3-none-any.whl
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $python scripts/check_boundary.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $python scripts/run_consumer.py --bundle package-input/bundle.json --label ci-consumer --profile minimal --kind $env:SEED_EVIDENCE_KIND
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed-consumer-evidence
+          path: |
+            reports/ci-consumer/
+            dist/
+          if-no-files-found: error
+          include-hidden-files: true
