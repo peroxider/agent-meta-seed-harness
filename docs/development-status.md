@@ -32,7 +32,14 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
 - Context uses versioned policy/schema/normalizer/renderer/tokenizer artifacts,
   the five-section budget ladder, redaction before selection and independent
   Host recomputation. Six forged projections are refused; 100 requests over one
-  frozen Task retain identical identity, provenance and rendered content.
+  frozen Task retain identical identity, provenance and rendered content, and
+  `test_context_projection.py` now extends determinism beyond one frozen Task:
+  distinct Tasks share the exact provenance frame (policies, renderers,
+  normalized source set) with only the task_input body and the Task's own
+  input Artifact differing, every artifact-shaped provenance reference
+  resolves to its content-addressed bytes, and the same input projects
+  byte-identically in a fresh daemon generation — including the whole stored
+  manifest minus per-projection identity/time fields.
 - Loop/tool tests cover complete normalized terminal arrays, LENGTH, free-text
   non-dispatch, ordered history, schemas, policy/Task limits, 16/17 tool calls,
   global call IDs and stop/continue-on-error behavior, where a continued

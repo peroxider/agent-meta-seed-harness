@@ -112,6 +112,14 @@ Task retain exactly the same projection identity/provenance/rendered bytes and
 then complete through the actual fake Provider. This caught and fixed replay
 invalidation of an earlier Host-issued projection object. Public causal queries
 confirm zero calls for forgeries and exactly one model call for the replay case.
+Determinism and provenance now extend beyond one frozen Task: distinct Tasks
+share the exact provenance frame (policy/redaction-policy artifacts, per-section
+renderers, normalized source set) with only the task_input body and the Task's
+own input Artifact differing, every artifact-shaped provenance reference
+resolves to its content-addressed bytes (fact/runtime references are
+generation-scoped UUIDs bound to content hashes), and the same input projects
+byte-identically in a fresh daemon generation, stored manifest included minus
+per-projection identity/time fields.
 
 The complete Context/AC-M48/NFR-M48 matrix remains required; these development
 changes do not promote a dependency or advertise Host SPI 1.0.0.
