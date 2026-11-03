@@ -92,7 +92,11 @@ explain a round's lineage from transcript, journal and public Task trace;
   completes the unique terminal without a second model call; a lost Task.Wait
   response is re-observed byte-identically, and a plain restart keeps new Tasks
   on the frozen serving revision/Composition (only a reviewed cutover advances
-  serving).
+  serving). The same file injects a cancel inside a pre-dispatch window —
+  cooperative cancellation lands with zero invocations/projections/Provider
+  callbacks and both envelopes replay durable receipts after restart — and
+  replays an UNKNOWN-outcome submit to its durable receipt without
+  re-execution.
   Upgrade tests cover cutover, frozen confirmed-work drain, removal
   of a drained old package while the new version serves and a bad candidate
   preserving healthy serving. Cutover immediately revokes old scoped grants.

@@ -21,7 +21,7 @@ from agent_meta_runtime.sdk.transport import LocalConnection
 
 from agent_meta_seed_harness.session_coordinator import message_input, upload
 
-from recovery_runtime import probe_events
+from recovery_runtime import probe_events, wait_invocations
 from seed_actor import create_actor
 from seed_package import install_seed, seed_bundle, wait_ready
 from seed_runtime import daemon_process
@@ -29,8 +29,10 @@ from seed_runtime import daemon_process
 REALM = "realm://main"
 SUBMIT = "agent_meta.public.v1.Task.Submit"
 WAIT = "agent_meta.public.v1.Task.Wait"
+CANCEL = "agent_meta.public.v1.Task.Cancel"
 SUBMIT_1 = "task://019a44d0-0000-7000-8000-000000000001"
 SUBMIT_2 = "task://019a44d0-0000-7000-8000-000000000002"
+CANCEL_1 = "task://019a44d0-0000-7000-8000-000000000003"
 PERMISSIONS = [
     "artifact.put", "task.submit", "task.cancel", "model.invoke",
     "capability.invoke", "state.read", "state.write",
@@ -53,13 +55,18 @@ async def invoke_fake(request):
 '''
 
 # The consumer scheduling window after a durably confirmed model result and
-# before the Task terminal makes the crash boundary deterministic.
+# before the Task terminal makes the crash boundary deterministic; the
+# scenario-gated pre-dispatch window exposes an accepted Task with zero
+# durable effects for the cancel-before-first-dispatch injection.
 LOOP = b'''
 import asyncio
+import json
 from agent_meta_runtime.sdk.host import terminal_result
 from .context import project
 
 async def run_task(task, host):
+    if json.loads(task.input_content)["scenario"] == "delayed":
+        await asyncio.sleep(3)
     response = await host.invoke_model(await project(task, host))
     await asyncio.sleep(3)
     return terminal_result(response)
@@ -308,3 +315,118 @@ def test_restart_continues_the_frozen_serving_revision_for_new_tasks(tmp_path):
 
         asyncio.run(verify())
         assert len(probe_events(recovered)) == 1
+
+
+def test_cancel_before_first_dispatch_leaves_no_effect_and_never_resurrects(tmp_path):
+    bundle, publisher = instrumented_bundle()
+    with daemon_process(tmp_path, publishers=[publisher], label="cancel-first") as owner:
+        install_seed(owner.data_dir, tmp_path, bundle)
+        asyncio.run(wait_ready(owner.data_dir))
+        authority = create_actor(owner.data_dir, permissions=PERMISSIONS)
+
+        async def run():
+            client = await connect(owner.data_dir, authority=authority)
+            try:
+                reference = await upload(client, authority,
+                    message_input("canary", scenario="delayed"), kind="task_input")
+                submit = client.build_envelope_jcs(
+                    realm_id=REALM, actor_id=authority.actor_id,
+                    payload_type="task.submit/v1",
+                    payload={"input_artifact_id": reference}, command_id=SUBMIT_1)
+                receipt = await client.execute_command(SUBMIT, submit)
+                task_id = receipt.resource["task_id"]
+                # Inside the loop's pre-dispatch window: accepted, zero
+                # durable invocations or projections.
+                execution = await wait_invocations(owner.data_dir, task_id,
+                    statuses=[])
+                assert execution["invocations"] == [] and execution["projections"] == []
+                cancel = client.build_envelope_jcs(
+                    realm_id=REALM, actor_id=authority.actor_id,
+                    payload_type="task.cancel/v1",
+                    payload={"task_id": task_id, "reason_code": "requested"},
+                    command_id=CANCEL_1)
+                cancellation = await client.execute_command(CANCEL, cancel)
+                result, terminal = await client.wait_task(task_id, timeout_s=10)
+                assert terminal and result["status"] == "CANCELLED", result
+                after = await client.get_task_execution(task_id)
+                assert after["invocations"] == [] and after["projections"] == []
+                return submit, cancel, cancellation, task_id
+            finally:
+                await client.aclose()
+
+        submit, cancel, cancellation, task_id = asyncio.run(run())
+        # No effect was ever dispatched in either window.
+        assert probe_events(owner) == []
+        owner.process.kill()
+        owner.process.wait(timeout=10)
+    with daemon_process(tmp_path, publishers=[publisher], label="cancel-restart") as recovered:
+        async def replay():
+            client = await connect(recovered.data_dir, authority=authority)
+            try:
+                # Both original envelopes replay their durable receipts; the
+                # cancelled Task is never resurrected or re-executed.
+                submit_replay = await client.execute_command(SUBMIT, submit)
+                assert submit_replay.resource["task_id"] == task_id
+                assert await client.execute_command(CANCEL, cancel) == cancellation
+                result, terminal = await client.wait_task(task_id, timeout_s=10)
+                assert terminal and result["status"] == "CANCELLED", result
+                after = await client.get_task_execution(task_id)
+                assert after["invocations"] == [] and after["projections"] == []
+            finally:
+                await client.aclose()
+
+        asyncio.run(replay())
+        assert probe_events(recovered) == []
+
+
+def test_unknown_outcome_replay_returns_durable_receipt_without_reexecution(tmp_path):
+    bundle, publisher = instrumented_bundle()
+    with daemon_process(tmp_path, publishers=[publisher], label="unknown-first") as owner:
+        install_seed(owner.data_dir, tmp_path, bundle)
+        asyncio.run(wait_ready(owner.data_dir))
+        authority = create_actor(owner.data_dir, permissions=PERMISSIONS)
+
+        async def lose_midflight():
+            client = await connect(owner.data_dir, authority=authority)
+            try:
+                reference = await upload(client, authority,
+                    message_input("canary", scenario="unknown"), kind="task_input")
+                envelope = client.build_envelope_jcs(
+                    realm_id=REALM, actor_id=authority.actor_id,
+                    payload_type="task.submit/v1",
+                    payload={"input_artifact_id": reference}, command_id=SUBMIT_1)
+                receipt = await client.execute_command(SUBMIT, envelope)
+                task_id = receipt.resource["task_id"]
+                # Kill while the Provider callback is still in flight: the
+                # effect outcome is UNKNOWN to every later incarnation.
+                await wait_invocations(owner.data_dir, task_id,
+                    statuses=["RUNNING"])
+                return envelope, receipt, task_id
+            finally:
+                await client.aclose()
+
+        envelope, receipt, task_id = asyncio.run(lose_midflight())
+        asyncio.run(await_probe(owner, 1))
+        owner.process.kill()
+        owner.process.wait(timeout=10)
+    with daemon_process(tmp_path, publishers=[publisher], label="unknown-restart") as recovered:
+        async def replay():
+            client = await connect(recovered.data_dir, authority=authority)
+            try:
+                # The accepted command replays its durable receipt; the
+                # UNKNOWN outcome stays stopped, never re-executed.
+                replayed = await client.execute_command(SUBMIT, envelope)
+                assert replayed.resource["task_id"] == task_id
+                assert await client.execute_command(SUBMIT, envelope) == replayed
+                result, terminal = await client.wait_task(task_id, timeout_s=15)
+                assert terminal and result["status"] == "FAILED_RECOVERY", result
+                assert result["error"] == "EXTERNAL_EFFECT_UNKNOWN", result
+                after = await client.get_task_execution(task_id)
+                assert after["consumed_budget"]["model_calls"] == 1
+                assert after["invocations"][0]["status"] == "FAILED"
+                assert after["invocations"][0]["error"] == "EXTERNAL_EFFECT_UNKNOWN"
+            finally:
+                await client.aclose()
+
+        asyncio.run(replay())
+        assert probe_events(recovered) == []

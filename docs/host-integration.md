@@ -161,7 +161,14 @@ result with no second Provider callback across daemon generations. A dropped
 `Task.Wait` response with the daemon alive is re-observed byte-identically
 through a fresh connection. A plain restart also serves brand-new Tasks under
 the same frozen serving revision and Composition — serving advances only through
-a reviewed package cutover, not process loss. These are development checkpoints;
+a reviewed package cutover, not process loss. The same file closes two S02
+injection leftovers: a cancel inside a consumer-side pre-dispatch window (the
+loop idles before any projection) takes effect cooperatively with zero
+invocations, projections or Provider callbacks, and after restart both the
+submit and cancel envelopes replay their durable receipts without resurrecting
+the Task; an UNKNOWN-outcome submit (daemon killed mid-callback) replays its
+durable receipt with the FAILED_RECOVERY/EXTERNAL_EFFECT_UNKNOWN terminal and
+never re-executes. These are development checkpoints;
 RP-05 stays OPEN until release evidence closes it.
 
 ## Upgrade and uninstall ownership
