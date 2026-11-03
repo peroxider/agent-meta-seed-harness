@@ -1,0 +1,1 @@
+"""Seed-owned deterministic capabilities."""

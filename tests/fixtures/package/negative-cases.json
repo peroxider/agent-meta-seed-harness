@@ -1,0 +1,16 @@
+[
+  {"case":"unknown_field","expected":"manifest.unknown_field:preferred_backend"},
+  {"case":"bad_signature","expected":"manifest.signature_invalid"},
+  {"case":"contract","expected":"contract.incompatible:harness_contract"},
+  {"case":"privileged_grant","expected":"grant_requests.invalid:0"},
+  {"case":"foreign_realm","expected":"grant_requests.realm_mismatch"},
+  {"case":"foreign_capability","expected":"grant_requests.foreign_capability"},
+  {"case":"foreign_code","expected":"descriptor.foreign_code:"},
+  {"case":"provenance","expected":"provenance.source_mismatch"},
+  {"case":"placement","expected":"descriptor.placement_unsafe:"},
+  {"case":"backend_feature","expected":"backend.feature_unavailable:process"},
+  {"case":"source_private","expected":"package.source_private_runtime_import:"},
+  {"case":"source_dynamic","expected":"package.source_dynamic_import:"},
+  {"case":"source_path","expected":"package.source_import_path_mutation:"},
+  {"case":"content_hash","expected":"package.invalid"}
+]

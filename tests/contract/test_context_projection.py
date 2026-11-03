@@ -1,0 +1,103 @@
+"""SH-CTX-01: independent package + real public-wheel Context enforcement.
+
+The signed consumer fixture requests deliberately forged projections. It never
+changes Runtime state or its readiness and imports only the published SDK.
+"""
+
+import asyncio
+
+from agent_meta_runtime.sdk import connect
+from agent_meta_runtime.sdk.host import JsonPart, TerminalResult, TextPart, encode_terminal_result
+from agent_meta_runtime.sdk.packages import canonical_json, sha256_hex
+from agent_meta_runtime.sdk.context import SECTION_DELIMITER
+
+from seed_package import install_seed, seed_bundle, wait_ready
+from seed_runtime import admin, running_daemon
+
+
+CONTEXT_PROBE = b'''
+from dataclasses import replace
+import json
+from agent_meta_runtime.sdk.context import build_projection_input, rendered_sections
+
+async def project(task, host):
+    request = build_projection_input(task)
+    value = json.loads(task.input_content)["value"]
+    if value.startswith("forge-"):
+        kind = value[len("forge-"):]
+        if kind in ("content", "count", "renderer"):
+            original = request.sections[1]
+            changes = {"content": {"content": b'"unredacted"', "token_count": 12},
+                "count": {"token_count": original.token_count + 1},
+                "renderer": {"renderer_artifact_id": request.policy_artifact_id}}[kind]
+            request = replace(request, sections=(request.sections[0], replace(original, **changes), *request.sections[2:]))
+        elif kind == "policy":
+            request = replace(request, policy_artifact_id=request.redaction_policy_artifact_id)
+        elif kind == "source":
+            request = replace(request, source_refs=request.source_refs[1:])
+        elif kind == "budget":
+            request = replace(request, budget_tokens=request.budget_tokens + 1)
+    projection = await host.project_context(request)
+    if value == "repeat-context-100":
+        expected_hash = projection.manifest.identity_hash()
+        expected_bytes = projection.rendered_content
+        assert [s.section_id for s in projection.manifest.sections] == ["system", "task_input", "capability_schema", "state_summary", "facts"]
+        assert projection.manifest.total_tokens == len(expected_bytes) <= 16384
+        assert json.loads(rendered_sections(projection)["task_input"])["value"] == value
+        assert any(ref.kind == "constitution" for ref in projection.manifest.source_refs)
+        assert any(ref.kind == "runtime" for ref in projection.manifest.source_refs)
+        assert len({s.renderer_artifact_id for s in projection.manifest.sections}) == 5
+        for _ in range(99):
+            replayed = await host.project_context(build_projection_input(task))
+            assert replayed.manifest.identity_hash() == expected_hash
+            assert replayed.rendered_content == expected_bytes
+    return projection
+'''
+
+
+def test_real_host_rejects_six_forged_contexts_and_replays_frozen_context_100_times(tmp_path):
+    bundle, publisher = seed_bundle(overrides={"agent_meta_seed_harness/context.py": CONTEXT_PROBE})
+    with running_daemon(tmp_path, publishers=[publisher]) as data_dir:
+        install_seed(data_dir, tmp_path, bundle)
+        asyncio.run(wait_ready(data_dir))
+        cases = [("forge-" + kind, "FAILED") for kind in ("content", "count", "renderer", "policy", "source", "budget")]
+        cases.append(("repeat-context-100", "SUCCEEDED"))
+        for value, status in cases:
+            path = tmp_path / "task-input.json"
+            path.write_bytes(canonical_json({"provider": "fake", "scenario": "terminal", "value": value}))
+            reference = admin(data_dir, "artifact", "put", str(path), "--kind", "task_input")["artifact_id"]
+            task = admin(data_dir, "task", "submit", "--input-artifact", reference)
+            async def observed():
+                client = await connect(data_dir)
+                try:
+                    result, terminal = await client.wait_task(task["task_id"], timeout_s=10)
+                    assert terminal and result["status"] == status, result
+                    graph = await client.why(task["task_id"])
+                    invocations = [node for node in graph["nodes"] if node.startswith("invocation://")]
+                    execution = await client.get_task_execution(task["task_id"])
+                    assert sorted(item["invocation_id"] for item in execution["invocations"]) == sorted(invocations)
+                    if status == "FAILED":
+                        assert result["error"] == "INVALID_RESULT" and not invocations
+                    else:
+                        assert len(invocations) == 1
+                        assert len(execution["projections"]) == 1
+                        assert execution["projections"][0]["manifest"]["total_tokens"] <= 16384
+                        assert execution["consumed_budget"]["model_calls"] == 1
+                        stored = execution["projections"][0]
+                        manifest_content = canonical_json(stored["manifest"])
+                        manifest_id = "artifact://sha256/" + sha256_hex(manifest_content)
+                        assert await client.get_artifact_content(manifest_id) == manifest_content
+                        bodies = []
+                        for section in stored["manifest"]["sections"]:
+                            body = await client.get_artifact_content(section["output_artifact_id"])
+                            assert len(body) == section["token_count"]
+                            assert section["output_artifact_id"] == "artifact://sha256/" + sha256_hex(body)
+                            bodies.append(body)
+                        rendered = await client.get_artifact_content(stored["rendered_artifact_id"])
+                        assert rendered == SECTION_DELIMITER.join(bodies)
+                        assert len(rendered) == stored["manifest"]["total_tokens"]
+                        expected = TerminalResult((TextPart(value), JsonPart({"provider": "fake"}), TextPart("done")))
+                        assert result["result_artifact_id"] == "artifact://sha256/" + sha256_hex(encode_terminal_result(expected))
+                finally:
+                    await client.aclose()
+            asyncio.run(observed())
