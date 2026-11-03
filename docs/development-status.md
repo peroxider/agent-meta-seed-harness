@@ -1,9 +1,17 @@
 # Development status — 2026-11-03
 
-The full S00 → S01 → S01A → S02 → S03 → S04 → S05 → S06 → S07 plan remains
+The full S00 → S01 → S01A → S02 → S03 → S04 → S05 → S06 → S07 → S08 → S09 plan remains
 in scope. Development is in progress; no product profile is released and all
 RP-00–RP-07 dependencies remain OPEN. Machine reports under `reports/bootstrap/`
 are explicitly DEVELOPMENT_ONLY and do not promote release statuses.
+
+The updated plan includes `evolution-artifact` (S08) and `evolution-code` (S09).
+The machine ledger and release CLI/CI choices now include their five new named
+requirements, all PLANNED. These profiles accumulate every preceding gate;
+S07 reports cannot establish S08/S09. Their implementations and required
+consumer modules are still missing, so both release gates must reject.
+Plan files are part of the source digest, sdist validation and clean release
+snapshot: changing acceptance scope invalidates earlier consumer evidence.
 
 ## Implemented development path
 

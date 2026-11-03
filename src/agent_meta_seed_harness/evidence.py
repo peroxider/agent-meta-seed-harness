@@ -12,7 +12,7 @@ import zipfile
 import zlib
 import xml.etree.ElementTree as ET
 
-PROFILES = ("minimal", "provider", "tools", "session", "evolution")
+PROFILES = ("minimal", "provider", "tools", "session", "evolution", "evolution-artifact", "evolution-code")
 REQUIREMENTS = {
     "SH-BOOT-01": ("minimal", ("tests/contract/test_project_boundary.py",)),
     "SH-PKG-01": ("minimal", ("tests/contract/test_package_contract.py",)),
@@ -38,8 +38,15 @@ REQUIREMENTS = {
     "SH-EVO-02": ("evolution", ("tests/contract/test_evolution_policy.py",)),
     "SH-GOV-01": ("evolution", ("tests/contract/test_evolution_governance.py",)),
     "SH-GOV-02": ("evolution", ("tests/acceptance/test_evolution_release.py",)),
+    "SH-EVO-03": ("evolution-artifact", ("tests/acceptance/test_evolution_tool_pipeline.py",)),
+    "SH-EVO-04": ("evolution-artifact", ("tests/contract/test_evolution_artifact_policy.py",)),
+    "SH-GOV-03": ("evolution-artifact", ("tests/contract/test_evolution_artifact_governance.py",)),
+    "SH-EVO-05": ("evolution-code", ("tests/acceptance/test_evolution_code_release.py",)),
+    "SH-GOV-04": ("evolution-code", ("tests/contract/test_evolution_code_governance.py",)),
 }
-DEPENDENCIES = {"minimal": ("RP-00", "RP-01", "RP-02"), "provider": ("RP-03",), "tools": ("RP-04",), "session": ("RP-05",), "evolution": ("RP-06", "RP-07")}
+# Extensions inherit all earlier dependencies. Their new behavior requires its
+# own named consumer proofs; no new Runtime RPC/dependency ID is invented here.
+DEPENDENCIES = {"minimal": ("RP-00", "RP-01", "RP-02"), "provider": ("RP-03",), "tools": ("RP-04",), "session": ("RP-05",), "evolution": ("RP-06", "RP-07"), "evolution-artifact": (), "evolution-code": ()}
 
 # Required consumer modules, not a claim that file collection proves an entire
 # Runtime dependency. The actual assertions and reviewed CI verdict still own
@@ -91,7 +98,7 @@ def digest(path: Path) -> str:
 def source_digest(root: Path) -> str:
     """Bind reports to executable/source/policy/lock inputs, never reports."""
     inputs = {}
-    for name in ("src", "tests", "scripts", "package", ".github"):
+    for name in ("src", "tests", "scripts", "package", ".github", "docs/plans"):
         for path in sorted((root / name).rglob("*")):
             if path.is_file() and "__pycache__" not in path.parts and path.suffix not in (".pyc", ".pyo"):
                 if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):

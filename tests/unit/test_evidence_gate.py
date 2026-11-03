@@ -14,7 +14,7 @@ from agent_meta_seed_harness.packaging import EXECUTION_SOURCE_PATHS, build_bund
 from agent_meta_seed_harness.release_artifacts import verify_candidate_artifacts
 from agent_meta_seed_harness.release import ReleaseNotReady, release_candidate
 from agent_meta_seed_harness.evidence import (
-    DEPENDENCIES, DEPENDENCY_REQUIREMENTS, REQUIREMENTS, check_traceability, digest, safe_path, release_inputs,
+    DEPENDENCIES, DEPENDENCY_REQUIREMENTS, PROFILES, REQUIREMENTS, check_traceability, digest, safe_path, release_inputs,
 )
 
 
@@ -35,7 +35,7 @@ def synthetic_artifacts(root, inputs):
     wheel = write(root, "reports/synthetic/seed.whl", output.getvalue())
     output = io.BytesIO()
     with tarfile.open(fileobj=output, mode="w:gz") as archive:
-        files = [p for d in ("src", "tests", "scripts", "package", ".github") for p in (root / d).rglob("*") if p.is_file()]
+        files = [p for d in ("src", "tests", "scripts", "package", ".github", "docs/plans") for p in (root / d).rglob("*") if p.is_file()]
         for path in [*files, root / "pyproject.toml", root / "requirements-ci.in", root / "requirements-ci.lock", root / ".gitignore", root / "docs/release-policy.json"]:
             archive.add(path, arcname="agent_meta_seed_harness-0.1.0.dev1/" + path.relative_to(root).as_posix())
     sdist = write(root, "reports/synthetic/seed.tar.gz", output.getvalue())
@@ -82,6 +82,7 @@ def fixture(root):
     write(root, "pyproject.toml", b'[project]\nname="agent-meta-seed-harness"\nversion="0.1.0.dev1"\ndependencies = ["agent-meta-runtime==0.1.0.dev1"]\n')
     write(root, "requirements-ci.in", b"# synthetic preparation inputs\n")
     write(root, ".gitignore", b"reports/\n")
+    write(root, "docs/plans/synthetic-scope.md", b"# Synthetic release scope\n")
     write(root, "requirements-ci.lock", f"agent-meta-runtime==0.1.0.dev1 --hash=sha256:{runtime_wheel['sha256']}\n".encode())
     write(root, "tests/fixtures/fixture.json", b'{"synthetic":true}\n')
     write(root, "docs/ci-inputs.json", json.dumps({"schema": "seed-ci-inputs/v1", "runtime_wheel_sha256": runtime_wheel["sha256"],
@@ -316,3 +317,58 @@ def test_collector_ignores_inherited_filters_and_preserves_existing_report(tmp_p
 def test_evidence_path_escape_is_rejected(tmp_path, path):
     with pytest.raises(ValueError):
         safe_path(tmp_path, path)
+
+
+@pytest.mark.parametrize("profile,required,excluded", [
+    ("evolution-artifact", ("SH-EVO-03", "SH-EVO-04", "SH-GOV-03"), ("SH-EVO-05", "SH-GOV-04")),
+    ("evolution-code", ("SH-EVO-03", "SH-EVO-04", "SH-GOV-03", "SH-EVO-05", "SH-GOV-04"), ()),
+])
+def test_evolution_extension_profiles_require_their_missing_named_proofs(profile, required, excluded):
+    root = Path(__file__).resolve().parents[2]
+    issues = check_traceability(root, profile)
+    for name in required:
+        assert f"{name}: not VERIFIED" in issues
+        assert any(issue.startswith(f"{name}: missing proof ") for issue in issues)
+    for name in excluded:
+        assert not any(issue.startswith(name + ":") for issue in issues)
+    assert any(issue.startswith("SH-EVO-01:") for issue in issues)
+    assert any(issue.startswith("SH-BOOT-01:") for issue in issues)
+
+
+@pytest.mark.parametrize("profile", ["evolution-artifact", "evolution-code"])
+def test_evolution_reports_cannot_authorize_extension_profiles(tmp_path, profile):
+    from agent_meta_seed_harness.evidence import _consumer_proof
+    data = fixture(tmp_path)
+    proof = copy.deepcopy(data["requirements"][0]["evidence"])
+    environment = json.loads((tmp_path / proof["environment"]["path"]).read_bytes())
+    environment["profile"] = "evolution"
+    proof["environment"] = write(tmp_path, proof["environment"]["path"], json.dumps(environment).encode())
+    with pytest.raises(ValueError, match="consumer profile does not cover requirement"):
+        _consumer_proof(tmp_path, proof, REQUIREMENTS["SH-BOOT-01"][1],
+            inputs=release_inputs(tmp_path), profile=profile)
+
+
+def test_evolution_profile_plan_and_ci_choices_match_the_machine_gate():
+    import re
+    root = Path(__file__).resolve().parents[2]
+    plan = (root / "docs/plans/v0.1/seed-harness/Seed_Harness_Traceability.md").read_text(encoding="utf-8")
+    planned = set(re.findall(r"^\| (SH-[A-Z]+-\d+) \|", plan, re.M))
+    assert planned == {name for name in REQUIREMENTS if name.startswith("SH-")}
+    ledger = json.loads((root / "docs/traceability.json").read_bytes())
+    assert {row["id"] for row in ledger["requirements"]} == set(REQUIREMENTS)
+    for workflow in ("ci.yml", "release.yml"):
+        content = (root / ".github/workflows" / workflow).read_text(encoding="utf-8")
+        block = re.search(r"(?ms)^      profile:\n(.*?)(?=^      \w+:|^permissions:)", content).group(1)
+        choices = re.search(r"options: \[([^\]]+)\]", block).group(1)
+        assert tuple(item.strip() for item in choices.split(",")) == PROFILES
+    assert PROFILES[-2:] == ("evolution-artifact", "evolution-code")
+
+
+def test_plan_changes_invalidate_existing_release_evidence(tmp_path):
+    fixture(tmp_path)
+    before = release_inputs(tmp_path)["seed_source_sha256"]
+    plan = tmp_path / "docs/plans/synthetic-scope.md"
+    plan.write_bytes(plan.read_bytes() + b"\nAdditional required acceptance scope.\n")
+    assert release_inputs(tmp_path)["seed_source_sha256"] != before
+    issues = check_traceability(tmp_path, "minimal")
+    assert any("invalid evidence" in issue and "seed_source_sha256" in issue for issue in issues)

@@ -22,7 +22,7 @@ def snapshot(root):
     # Bootstrap uses only stdlib before the Seed distribution is installed.
     # The installed evidence verifier independently checks this exact recipe.
     inputs, fixtures = {}, {}
-    for directory in ("src", "tests", "scripts", "package", ".github"):
+    for directory in ("src", "tests", "scripts", "package", ".github", "docs/plans"):
         for path in sorted((root / directory).rglob("*")):
             if not path.is_file() or "__pycache__" in path.parts or path.suffix in (".pyc", ".pyo"):
                 continue

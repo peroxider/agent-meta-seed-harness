@@ -162,5 +162,9 @@ Review assertion coverage before attaching proofs or closing RP dependencies.
 evidence. Only after all real profile/platform/dependency gates pass should
 `build_release.py --profile minimal` prepare the exact tested candidate manifest.
 It performs no rebuild, signing, publication or activation. Keep Seed's release
-decision independent from Runtime's release conclusion. S04-S07 add their own
-Provider, tool, session and Evolution operations and proof requirements.
+decision independent from Runtime's release conclusion. S04–S09 add their own
+Provider, tool, session, configuration/artifact/code evolution operations and
+proof requirements. Both CI workflows offer the same cumulative profile list;
+the owned consumer forwards the selected profile and refuses missing named
+modules before loading a bundle or starting Tasks. A selectable profile is not
+a product support declaration.

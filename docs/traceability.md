@@ -59,3 +59,8 @@ Backend in Windows development; the complete release matrix remains open.
 | SH-EVO-02 | evolution | PLANNED | `tests/contract/test_evolution_policy.py` |
 | SH-GOV-01 | evolution | PLANNED | `tests/contract/test_evolution_governance.py` |
 | SH-GOV-02 | evolution | PLANNED | `tests/acceptance/test_evolution_release.py` |
+| SH-EVO-03 | evolution-artifact | PLANNED | `tests/acceptance/test_evolution_tool_pipeline.py` |
+| SH-EVO-04 | evolution-artifact | PLANNED | `tests/contract/test_evolution_artifact_policy.py` |
+| SH-GOV-03 | evolution-artifact | PLANNED | `tests/contract/test_evolution_artifact_governance.py` |
+| SH-EVO-05 | evolution-code | PLANNED | `tests/acceptance/test_evolution_code_release.py` |
+| SH-GOV-04 | evolution-code | PLANNED | `tests/contract/test_evolution_code_governance.py` |

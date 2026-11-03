@@ -70,7 +70,7 @@ def verify_candidate_artifacts(root: Path, references: dict, *, inputs: dict) ->
             for member in members:
                 if not member.name.startswith(prefix) or any(part in ("", ".", "..") for part in member.name.removeprefix(prefix).split("/")):
                     raise ValueError("candidate sdist path is invalid")
-            expected = [p for d in ("src", "tests", "scripts", "package", ".github") for p in (root / d).rglob("*")
+            expected = [p for d in ("src", "tests", "scripts", "package", ".github", "docs/plans") for p in (root / d).rglob("*")
                 if p.is_file() and "__pycache__" not in p.parts and p.suffix not in (".pyc", ".pyo")]
             expected += [root / n for n in ("pyproject.toml", "requirements-ci.in", "requirements-ci.lock", ".gitignore", "docs/release-policy.json")]
             for source in expected:

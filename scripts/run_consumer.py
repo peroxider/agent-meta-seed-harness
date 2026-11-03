@@ -16,7 +16,7 @@ from agent_meta_seed_harness.release_artifacts import verify_candidate_artifacts
 
 
 SOURCE_PATHS = ["src", "tests", "scripts", "package", ".github", ".gitignore", "pyproject.toml", "requirements-ci.in",
-    "requirements-ci.lock", "docs/release-policy.json", "docs/ci-inputs.json", "docs/runtime-contract"]
+    "requirements-ci.lock", "docs/release-policy.json", "docs/ci-inputs.json", "docs/runtime-contract", "docs/plans"]
 
 
 def git_identity(root):

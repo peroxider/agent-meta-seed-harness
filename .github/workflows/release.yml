@@ -5,7 +5,7 @@ on:
       profile:
         required: true
         type: choice
-        options: [minimal, provider, tools, session, evolution]
+        options: [minimal, provider, tools, session, evolution, evolution-artifact, evolution-code]
       evidence_run_id:
         description: Completed owned consumer CI run containing the wheelhouse and reviewed evidence
         required: true

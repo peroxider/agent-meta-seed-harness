@@ -25,9 +25,19 @@ all identities from `verify_candidate_artifacts`, `junit_sha256`, the actual
 isolated `command`, sorted `execution_profiles`, `credential_profile` and
 `contracts={public_api,harness,capability,artifact_format}`. Reports must bind
 the exact final source, fixtures, lock, policy, Runtime wheel and contract.
-The source digest recipe hashes executable/test/script/package/CI files and
+The source digest recipe hashes executable/test/script/package/CI files, the
+authoritative `docs/plans` acceptance documents, and
 the project, lock and reviewed publisher policy; reports and mutable status
 ledgers are excluded to avoid circular evidence hashes.
+
+Profiles are cumulative: `minimal`, `provider`, `tools`, `session`, `evolution`,
+`evolution-artifact` and `evolution-code`. S08 adds SH-EVO-03/04 and SH-GOV-03;
+S09 additionally adds SH-EVO-05 and SH-GOV-04. Older-profile reports cannot cover
+these requirements. New profiles do not change Runtime entities or signatures
+and inherit all existing RP-00–RP-07 dependencies. They still require their own
+actual artifact/code evolution, World and governance proofs. Missing named
+modules, unverified rows or incomplete evidence are release failures, not
+optional skips. The CI profile selector follows the same ordered registry.
 
 The verifier checks real Seed wheel metadata/source bytes, sdist source/lock/CI
 and policy bytes, every SBOM component/hash, build provenance and the complete

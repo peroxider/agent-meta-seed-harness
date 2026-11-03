@@ -99,7 +99,7 @@ def test_final_installed_wheel_sdist_sbom_and_signed_ampak_bind_same_inputs(cand
         "status": "DEVELOPMENT_ONLY", "inputs": inputs, "artifacts": copied, "identities": identities}))
 
 
-@pytest.mark.parametrize("mutation", ["wheel", "source", "sbom", "provenance", "signature", "package_code", "package_lock", "closure", "review_copy"])
+@pytest.mark.parametrize("mutation", ["wheel", "source", "plan", "sbom", "provenance", "signature", "package_code", "package_lock", "closure", "review_copy"])
 def test_self_hashed_stale_or_inconsistent_artifacts_are_rejected(candidate, tmp_path, mutation):
     original, inputs, refs, bundle = candidate
     root = tmp_path / "changed-candidate"
@@ -114,6 +114,9 @@ def test_self_hashed_stale_or_inconsistent_artifacts_are_rejected(candidate, tmp
     elif mutation == "source":
         path = root / "src/agent_meta_seed_harness/loop.py"
         path.write_bytes(path.read_bytes() + b"\n# post-proof source change\n")
+    elif mutation == "plan":
+        path = root / "docs/plans/v0.1/seed-harness/Seed_Harness_Development_Guide.md"
+        path.write_bytes(path.read_bytes() + b"\nPost-proof acceptance scope change.\n")
     elif mutation in ("sbom", "provenance"):
         provenance = json.loads((root / refs["seed_provenance"]["path"]).read_bytes())
         if mutation == "sbom":

@@ -22,6 +22,12 @@ on:
         description: Completed run containing seed-package-bundle (bundle.json and artifacts/)
         required: true
         type: string
+      profile:
+        description: Cumulative profile; missing proof modules refuse the run
+        required: true
+        default: minimal
+        type: choice
+        options: [minimal, provider, tools, session, evolution, evolution-artifact, evolution-code]
       evidence_kind:
         description: Release evidence also requires committed approved publisher policy
         required: true
@@ -102,6 +108,7 @@ jobs:
         env:
           PIP_NO_INDEX: '1'
           SEED_EVIDENCE_KIND: ${{ inputs.evidence_kind }}
+          SEED_PROFILE: ${{ inputs.profile }}
         run: |
           $python = (Resolve-Path .venv/Scripts/python.exe).Path
           & $python scripts/build_development.py
@@ -110,7 +117,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $python scripts/check_boundary.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $python scripts/run_consumer.py --bundle package-input/bundle.json --label ci-consumer --profile minimal --kind $env:SEED_EVIDENCE_KIND
+          & $python scripts/run_consumer.py --bundle package-input/bundle.json --label ci-consumer --profile $env:SEED_PROFILE --kind $env:SEED_EVIDENCE_KIND
           exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
