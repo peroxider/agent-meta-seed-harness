@@ -144,14 +144,20 @@ class SessionCoordinator:
         self.journal_state = registered
         return receipt
 
-    async def reserve(self, message_id, value, *, scenario="terminal"):
-        """Persist pending before any dispatch; identical retries change nothing."""
+    async def reserve(self, message_id, value=None, *, scenario="terminal",
+                      input_artifact_id=None):
+        """Persist pending before any dispatch; identical retries change nothing.
+
+        ``input_artifact_id`` binds an already-uploaded authorized input
+        Artifact instead of deriving one from ``value``.
+        """
         document = await self.observe_transcript()
-        reference = await upload(
-            self.client, self.authority, message_input(value, scenario=scenario),
-            kind="task_input",
-        )
-        pending = reserve_message(document, message_id, reference)
+        if input_artifact_id is None:
+            input_artifact_id = await upload(
+                self.client, self.authority, message_input(value, scenario=scenario),
+                kind="task_input",
+            )
+        pending = reserve_message(document, message_id, input_artifact_id)
         if pending == document:
             return document
         await self._write_transcript(pending)

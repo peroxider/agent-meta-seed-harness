@@ -146,6 +146,21 @@ result reference and never resubmitted, and a Seed package upgrade preserves
 both session States while the next message runs under the new serving
 composition.
 
+`tests/contract/test_session_consistency.py` also closes the consumer-side
+part of two S06 exit gates at the current contract's scope. Identical
+logical inputs built in different key orders bind one content-addressed
+Artifact, and two distinct Tasks carrying it under one frozen serving
+revision render byte-identical `system`/`task_input`/`capability_schema`
+sections; only the Host-attached state/facts sections may differ, and only
+through session-scoped revision pointers. A task input whose value embeds
+both secret shapes (`sk-…` key tokens and `secret: …` assignments) is
+rewritten to `[REDACTED]` in the rendered model input before any budget
+ladder ranking, and the raw strings appear nowhere in the projection. The
+session State itself is not yet a Context source, so "same session
+revision" currently reduces to the frozen serving revision plus the
+identical input Artifact; a versioned session-history source still requires
+the Runtime contract named above.
+
 Input redaction receipts, frozen Context integration of committed history and
 summaries (the model input still carries only the current message) and
 release evidence remain required. Passing recovery tests does not close

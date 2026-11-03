@@ -300,3 +300,59 @@ def test_summary_provenance_commits_against_history_and_serving_stays_frozen(
             await client.aclose()
 
     asyncio.run(scenario())
+
+
+def test_identical_inputs_render_identical_projections_and_secrets_redact_before_ranking(
+    session_environment,
+):
+    data, authority = session_environment
+
+    async def scenario():
+        client = await connect(data, authority=authority)
+        try:
+            session = await open_session(client, authority, SESSION_DOCUMENT)
+            # The same logical input built in two different key orders is one
+            # content-addressed Artifact: ordering cannot influence anything
+            # downstream of admission.
+            leaked = "sk-abcdef12345678 secret: SESS_SECRET_CANARY"
+            first = {"provider": "fake", "scenario": "terminal", "value": leaked}
+            second = {"value": leaked, "scenario": "terminal", "provider": "fake"}
+            reference = await upload(client, authority, first)
+            assert reference == await upload(client, authority, second)
+            servings = []
+            rendered_inputs = []
+            for index, message in enumerate(("message-1", "message-2")):
+                await session.reserve(message, input_artifact_id=reference)
+                task_id = await session.submit_pending(
+                    f"task://019a44d0-0000-7000-8000-0000000000{2 * index + 1:02d}"
+                )
+                servings.append(session.submit_receipts[-1].resource["serving_revision"])
+                await session.complete_pending(
+                    f"task://019a44d0-0000-7000-8000-0000000000{2 * index + 2:02d}"
+                )
+                execution = await client.get_task_execution(task_id)
+                stored = execution["projections"][0]
+                rendered = await client.get_artifact_content(stored["rendered_artifact_id"])
+                rendered_inputs.append(rendered)
+            # One frozen serving revision, byte-identical redacted model
+            # input for identical inputs across distinct Tasks. Only the
+            # Host-attached state/facts sections may carry session-scoped
+            # revision pointers, which legitimately advance per round.
+            assert servings[0] == servings[1] and servings[0] > 0
+            section_bodies = [item.split(SECTION_DELIMITER) for item in rendered_inputs]
+            assert [len(item) for item in section_bodies] == [5, 5]
+            for index in range(3):
+                assert section_bodies[0][index] == section_bodies[1][index]
+            task_input = json.loads(section_bodies[0][1])
+            assert task_input == json.loads(section_bodies[1][1])
+            # Both string-level secret patterns were rewritten before the
+            # budget ladder ranked anything, in canonical key order.
+            assert task_input["value"] == "[REDACTED] [REDACTED]"
+            assert b"SESS_SECRET_CANARY" not in rendered_inputs[0]
+            assert b"sk-abcdef12345678" not in rendered_inputs[0]
+            assert b"SESS_SECRET_CANARY" not in rendered_inputs[1]
+            assert set(task_input) == {"provider", "scenario", "value"}
+        finally:
+            await client.aclose()
+
+    asyncio.run(scenario())
