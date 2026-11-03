@@ -1,0 +1,50 @@
+// Frozen transport framing for Public API v1 and Execution Backend v1 (§41.41).
+// Field numbers are frozen: fields may only be added; deleted numbers must
+// never be reused. Generated modules must declare the registry version from
+// agent_meta_runtime.protocols.versions.
+
+syntax = "proto3";
+
+package agent_meta.transport.v1;
+
+message RpcEnvelope {
+  uint32 protocol_major = 1; // v1 fixed at 1
+  uint32 protocol_minor = 2;
+  string request_id = 3; // UUIDv7; echoed verbatim in the response
+  string method = 4; // full method name from the registry
+  int64 deadline_at_us = 5; // 0 means server default; cannot express infinity
+  map<string, string> trace = 6; // only traceparent/tracestate allowed
+  oneof body {
+    bytes payload = 7; // method request/response protobuf
+    RpcError error = 8; // set on response error
+  }
+  bool is_response = 9;
+}
+
+message RpcError {
+  string code = 1;
+  bool retryable = 2;
+  string message_safe = 3;
+  uint32 details_schema_version = 4;
+  bytes details_jcs = 5;
+  string correlation_id = 6;
+}
+
+message HelloRequest {
+  repeated VersionRange supported = 1;
+  string client_instance_id = 2;
+}
+
+message HelloResponse {
+  uint32 selected_major = 1;
+  uint32 selected_minor = 2;
+  string server_instance_id = 3;
+  int64 server_time_us = 4;
+  uint32 max_frame_bytes = 5;
+}
+
+message VersionRange {
+  uint32 major = 1;
+  uint32 min_minor = 2;
+  uint32 max_minor = 3;
+}

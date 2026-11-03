@@ -1,0 +1,234 @@
+// Public API v1 messages (§41.52, §41.26). Field numbers are frozen:
+// fields may only be added; deleted numbers must never be reused. The
+// messages listed in §41.52 carry the exact field numbers from the spec;
+// other v1 request/response messages are additive and owned by this file.
+// Mutation methods all wrap the canonical CommandEnvelope per §41.52 —
+// public messages never re-define domain fields.
+// Public API 1.1 adds agent_meta.public.v1.Runtime.Stop using the existing
+// CommandRequest/MutationResponse messages; method registry lives in public_wire.
+// Public API 1.2 adds Task.GetExecution using GetTaskRequest/ResourceResponse;
+// the additive task-execution/v1 resource is specified in ADR 040.
+// Public API 1.3 adds Artifact.GetContent using GetArtifactRequest/ResourceResponse;
+// bounded ordinary reads use artifact-content/v1 (ADR 042).
+// Public API 1.5 adds read-only Task.GetTrace using GetTaskRequest/ResourceResponse.
+// Public API 1.4 adds signed Authority.CreatePrincipal/Delegate/Revoke using
+// CommandRequest/MutationResponse and ordinary identities only (ADR 044).
+// Public API 1.6 adds optional execution_binding to Task.GetExecution and
+// current GetView(include_backend=true) profile metadata (ADR 050).
+// Public API 1.7 adds SDK Host Provider plan/normalization callbacks (ADR 054).
+// No new RPC/field is added; unavailable Provider enforcement fails closed.
+// Public API 1.8 adds signed Harness.ConfigureProvider via CommandRequest and
+// MutationResponse; ordinary configuration contains handles, never secrets.
+// Public API 1.9 adds read-only Harness.ValidateProviderConfiguration with
+// CommandRequest/ResourceResponse; it validates but never claims the command.
+// Public API 1.11 adds Task-scoped Meta resource plans (execution SPI only).
+// Public API 1.12 adds State.Create/Get/Write using CommandRequest/MutationResponse.
+// State.Get is a signed audited snapshot command (ADR 061), not a free query.
+// Public API 1.10 adds optional bounded Provider accounting/terminal metadata
+// to Task.GetExecution's JSON resource; no new proto field numbers.
+
+syntax = "proto3";
+
+package agent_meta.public.v1;
+
+// --- §41.52 frozen messages -------------------------------------------------
+
+message RuntimeInfo {
+  bool live = 1;
+  bool core_ready = 2;
+  bool serving_ready = 3;
+  bool ready = 4; // v1 alias, MUST equal core_ready
+  repeated string core_reasons = 5;
+  repeated string serving_reasons = 6;
+  uint64 desired_revision = 7;
+  uint64 serving_revision = 8;
+  uint64 realized_revision = 9;
+}
+
+message CommandRequest {
+  bytes command_envelope_jcs = 1; // canonical CommandEnvelope JCS
+}
+
+message MutationResponse {
+  bytes receipt_jcs = 1; // MutationReceipt incl. command_id/action_id/meta_revision
+  bytes resource_jcs = 2; // created/updated resource JCS when applicable
+}
+
+message QueryPage {
+  bytes items_jcs = 1;
+  string next_cursor = 2; // empty when exhausted
+  uint64 snapshot_revision = 3;
+}
+
+message GetViewRequest {
+  string realm_id = 1;
+  optional uint64 meta_revision = 2; // absent = current
+  bool include_backend = 3;
+}
+
+message GetTaskRequest {
+  string task_id = 1;
+}
+
+message WaitTaskRequest {
+  string task_id = 1;
+  int64 wait_deadline_at_us = 2; // absolute; single Wait ≤ 60 s (§41.26)
+}
+
+message GetArtifactRequest {
+  string artifact_id = 1;
+}
+
+message VerifyArtifactRequest {
+  string artifact_id = 1;
+}
+
+message ValidateHarnessPackageRequest {
+  string manifest_artifact_id = 1;
+}
+
+message GetHarnessRequest {
+  string harness_id = 1;
+}
+
+message ListHarnessRequest {
+  string realm_id = 1;
+  string status = 2; // empty = all
+  uint32 limit = 3;
+  string cursor = 4;
+}
+
+message ValidateCompositionRequest {
+  string body_artifact_id = 1;
+  string baseline_id = 2;
+}
+
+message GetRefsRequest {
+  string realm_id = 1;
+}
+
+message WhyRequest {
+  string entity_id = 1;
+  uint32 max_depth = 2;
+  uint32 max_nodes = 3;
+  uint32 max_bytes = 4;
+  string cursor = 5;
+}
+
+message LineageRequest {
+  string entity_id = 1;
+  string direction = 2; // UPSTREAM | DOWNSTREAM
+  repeated string edge_types = 3;
+  uint32 limit = 4;
+  string cursor = 5;
+}
+
+message BeginPutRequest {
+  uint64 expected_size = 1;
+  string expected_sha256 = 2;
+}
+
+message BeginPutResponse {
+  string staging_handle = 1; // secret; only its hash is stored server-side
+  uint32 chunk_size = 2; // 1 MiB per §41.46
+  int64 expires_at_us = 3; // 1 hour staging expiry
+}
+
+message PutChunkRequest {
+  string staging_handle = 1;
+  uint64 offset = 2;
+  bytes data = 3;
+  string chunk_sha256 = 4;
+}
+
+message PutChunkResponse {
+  uint64 committed_offset = 1;
+}
+
+// --- additive v1 messages (owned by this file) -------------------------------
+
+message GetInfoRequest {}
+
+message DoctorRequest {}
+
+message DoctorResponse {
+  bytes report_jcs = 1; // DoctorReport JCS: ok + findings
+}
+
+message GetMetricsRequest {}
+
+message GetMetricsResponse {
+  bytes metrics_jcs = 1; // allowlist metrics (§41.49.4 label rules)
+}
+
+message GetRefsResponse {
+  uint64 desired_revision = 1;
+  uint64 serving_revision = 2;
+  uint64 realized_revision = 3;
+  string desired_composition_id = 4;
+  string serving_composition_id = 5;
+  string realized_composition_id = 6;
+  string reconcile_status = 7;
+}
+
+message ResourceResponse {
+  bytes resource_jcs = 1; // resource_type per §41.52 resource registry
+}
+
+message TaskWaitResponse {
+  bytes resource_jcs = 1; // task-result/v1 or task-handle/v1 snapshot
+  bool terminal = 2; // false when Wait timed out (task untouched, §41.26)
+}
+
+message ArtifactManifestResponse {
+  bytes manifest_jcs = 1; // artifact-manifest/v1
+}
+
+message VerifyArtifactResponse {
+  bool ok = 1;
+  string reason_code = 2; // stable code when ok=false
+}
+
+message ValidateCompositionResponse {
+  bytes issues_jcs = 1; // CompatibilityReport JCS
+  bool valid = 2;
+}
+
+message WhyResponse {
+  bytes result_jcs = 1;
+  string next_cursor = 2; // carries traversal frontier hash (§41.52)
+}
+
+message LineageResponse {
+  bytes items_jcs = 1;
+  string next_cursor = 2;
+}
+
+message GetExperimentRequest {
+  string experiment_id = 1;
+}
+
+message WaitExperimentRequest {
+  string experiment_id = 1;
+  int64 wait_deadline_at_us = 2;
+}
+
+message GetOperationRequest {
+  string operation_id = 1;
+}
+
+message WaitOperationRequest {
+  string operation_id = 1;
+  int64 wait_deadline_at_us = 2;
+}
+
+// Wire method registry (§41.26): framed RpcEnvelope transport, not gRPC.
+// Method names on the wire are `agent_meta.public.v1.<Group>.<Rpc>`:
+//   Runtime:  GetInfo GetView Doctor GetMetrics
+//   Task:     Submit Get Wait Cancel
+//   Artifact: BeginPut PutChunk Put GetManifest Verify
+//   Harness:  ValidatePackage Install Activate ConfigureProvider ValidateProviderConfiguration Get List Deactivate Uninstall
+//   Composition: Validate Commit GetRefs
+//   Evolution: Propose RunExperiment GetExperiment WaitExperiment Promote Rollback
+//   Graph:    Why Lineage
+//   Operations: GetOperation WaitOperation

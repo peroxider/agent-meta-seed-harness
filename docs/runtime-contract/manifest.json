@@ -1,0 +1,214 @@
+{
+  "files": [
+    {
+      "path": "docs/Agent_Meta_Runtime_Requirements_Design_v0.1.md",
+      "sha256": "c7dee47828ef51a4ae45e89b77bf9c5037c870c429f3dc83a8c6ca098f8d0ccb"
+    },
+    {
+      "path": "docs/spec/v0.1-scope-and-traceability.md",
+      "sha256": "58a03b8fbb4b5b5ab683b78370ba75c9e015c0a3d460ee4e8959b102c1abef10"
+    },
+    {
+      "path": "docs/spec/v0.1-implementation-handoff.md",
+      "sha256": "dbaa4cc486d6dcbab1cf7d3445b6bc0edb05130944cd428e4c903a0108cd0fb2"
+    },
+    {
+      "path": "docs/adr/031-public-harness-consumer-contract.md",
+      "sha256": "1df7f89d7aee4f8f831a163096de770a766e307e04ca42ad0687d86e24a17522"
+    },
+    {
+      "path": "docs/adr/032-public-host-spi.md",
+      "sha256": "94d0a0eca0c611fe3a2786343582297ba56317fad2125db51df69f620f2745f2"
+    },
+    {
+      "path": "docs/adr/033-local-command-authority-and-credential-storage.md",
+      "sha256": "3f9e37cd4e59e71359e800f284cfd3ec5e77eb006dc07329d170829c0259727c"
+    },
+    {
+      "path": "docs/adr/034-signed-activation-plan-and-delegation.md",
+      "sha256": "f046be55ff6ca36273025f24a87c3e48c8a6f716d96db123252b7db648c0060a"
+    },
+    {
+      "path": "docs/adr/035-local-daemon-lifecycle.md",
+      "sha256": "101fcf1163db055b19c30df5760b72323b0b98004b84e67f7e010da268ad0f87"
+    },
+    {
+      "path": "docs/adr/036-task-free-factories-and-async-reconciliation.md",
+      "sha256": "6c627e973bb26bee3ad040e72f5da93c5586a57bb247dceabf274a380dfe09b4"
+    },
+    {
+      "path": "docs/adr/037-bound-trusted-host-and-durable-invocation-journal.md",
+      "sha256": "ec74e57814cbaa71b15033577080874df936898dc0553b48e0b10d61f46051db"
+    },
+    {
+      "path": "docs/adr/038-harness-source-audit-and-serving-recovery.md",
+      "sha256": "094e5347acad733eeed6ba65ee70ce386bc4122aea814ea4eff9efbdbe89927a"
+    },
+    {
+      "path": "docs/adr/039-frozen-context-policy-and-host-recomputation.md",
+      "sha256": "d3f2a186a6382ed4f54f31b99b9b3b233d6f2f582ce8b1fad23efa1128792f54"
+    },
+    {
+      "path": "docs/adr/040-public-task-execution-inspection.md",
+      "sha256": "ec7c93c0e22becf996c8b0cc345edb66f590be9603dd381bb5e2bf34ce24721e"
+    },
+    {
+      "path": "docs/adr/041-installation-reference-and-grant-generation-guards.md",
+      "sha256": "765e6bad2b11b5ccc544e50a053de695563bf116fdc6cbdf261a9dc4373451d9"
+    },
+    {
+      "path": "docs/adr/042-public-ordinary-artifact-content.md",
+      "sha256": "a0199eb648f869c5c8858f6eb6a1d12b75f14691dcfb1395bf7424fffd0c7cc4"
+    },
+    {
+      "path": "docs/adr/043-strict-task-submission-scalars.md",
+      "sha256": "e43be1d94fb7eb1a28a4f63d792737cdbc52d31ca7b8bf4c86299b88fac32de9"
+    },
+    {
+      "path": "docs/adr/044-public-ordinary-principals-and-delegation.md",
+      "sha256": "1367cc6740704eaf9fe6af2285e7e6d0f60df570216d1688a0a5847fb9b1f1c8"
+    },
+    {
+      "path": "docs/adr/045-cooperative-host-call-scheduling.md",
+      "sha256": "1acc39f1495389aa738b1a70e6187f2e411e6ef738964204f054fdb523ddac87"
+    },
+    {
+      "path": "docs/adr/046-public-task-state-trace.md",
+      "sha256": "a446849174dfa75f4978184873ac393c611eddd57fa6ad0f822d4e90bf75e062"
+    },
+    {
+      "path": "docs/adr/047-root-certified-service-execution-tokens.md",
+      "sha256": "0a4ea0d0f98c858cc6890936aae23f5f6e140d09e20c6674b11e99ba57bf63cc"
+    },
+    {
+      "path": "docs/adr/048-inmemory-session-outcome-and-retention-contract.md",
+      "sha256": "73b5eaf4f606d7c4d5ef7ca4901903c616b08f77ad54e7fa3d409b1dd44d48be"
+    },
+    {
+      "path": "docs/adr/049-bootstrap-public-service-certificate.md",
+      "sha256": "638c3f6cdc6cc33a0c2400dccf66bacb05072473cade497da792dc55c4a086f7"
+    },
+    {
+      "path": "docs/adr/050-inmemory-host-activity-and-durable-ack.md",
+      "sha256": "a7f7c52c5d843622b168f05a552a51611f0a516ea5629bc28a25f148dc1f73e6"
+    },
+    {
+      "path": "docs/adr/051-controlled-provider-edge-and-worker-ownership.md",
+      "sha256": "ee87c0078169ca0d996275646244ac47f38300acf66033f830ebc0a20b29fa07"
+    },
+    {
+      "path": "docs/adr/052-durable-provider-invocation-accounting.md",
+      "sha256": "523878723f80d0612510e04943c2d8c9d8f7a4e9ba9c7e25749005ccac5cc352"
+    },
+    {
+      "path": "docs/adr/053-provider-dispatch-and-durable-terminal-edge.md",
+      "sha256": "4078ff1c183050b2ccf0dcd3b8271ae34e691af6795daa70600ecc08c2a0ad07"
+    },
+    {
+      "path": "docs/adr/054-public-provider-plan-and-normalization-spi.md",
+      "sha256": "4fb104e6d50f29e558c3eef60b6bd9ee624f33751c8d3153f527c00f8189ab30"
+    },
+    {
+      "path": "docs/adr/055-provider-profile-approval-and-frozen-pricing.md",
+      "sha256": "0f75fa68acdb9ff8c313307d9a7b81ef87384338f5d66108a8c284c72a65e03f"
+    },
+    {
+      "path": "docs/adr/056-provider-credential-provisioning-and-reviewable-cli.md",
+      "sha256": "bb2a9026c22baf1b78c0a2124bf6244f3ba5da46596b6249a3b5bcac1cddfdd3"
+    },
+    {
+      "path": "docs/adr/057-frozen-provider-admission-and-controlled-daemon-assembly.md",
+      "sha256": "297c372dc4bde134502e67615541a4d7a16755dd728cecbaa9aac6d8a6dca6f7"
+    },
+    {
+      "path": "docs/adr/058-explicit-native-provider-test-launch.md",
+      "sha256": "2ef0407340cc109128c6381f6ca54e5d6b405925995ae2ca06a2d178511f3ee3"
+    },
+    {
+      "path": "docs/adr/059-provider-terminal-observation-and-public-accounting.md",
+      "sha256": "33688918622ca390fc8bd234ceb678f2b31796d2f79ba4257866174ef0974bf8"
+    },
+    {
+      "path": "docs/adr/060-task-scoped-meta-resource-host.md",
+      "sha256": "c5f19e09b0d5e18f31e5bc790de35d8cf1e5ff287f34f78f278641e253dd3581"
+    },
+    {
+      "path": "docs/adr/061-public-managed-state-commands.md",
+      "sha256": "34736b1cc01cdf3e116ee3c6bfd5247172e24f45dbde8a898bd1870dd15792a6"
+    },
+    {
+      "path": "docs/adr/062-tool-child-actions-and-execution-bindings.md",
+      "sha256": "e1eec63fd01e898a206c700215ba8cd5076bcc300ea940888065cd54177401b7"
+    },
+    {
+      "path": "docs/adr/063-independent-trusted-scratch-worker-foundation.md",
+      "sha256": "b22ef4dadd9ede43ecc9821720389fdbc74b92bcb243db5355a76918ee102562"
+    },
+    {
+      "path": "docs/adr/064-bounded-static-scratch-observation.md",
+      "sha256": "dbc4179d9eb3067ef113868bb512f01171f435598997b526243698fd6a20f825"
+    },
+    {
+      "path": "docs/adr/065-source-only-scratch-candidate-construction.md",
+      "sha256": "2c43d430021d2b3d9ee92d9b6406bba775ebfbb040a7a2a600f9d67272d9a6f0"
+    },
+    {
+      "path": "docs/adr/066-transactional-scratch-session-cell-journal.md",
+      "sha256": "e6c4820faf13fc750d39f6a165839e3c2973f0ee4e3fd88a5b72b8048cb3b566"
+    },
+    {
+      "path": "docs/adr/067-authorized-owned-scratch-execution.md",
+      "sha256": "a83e68ef88bfc7d55a806e9d4a710ffe3aabfdc5dd53807ad381fb7a71a0e854"
+    },
+    {
+      "path": "docs/adr/068-public-async-scratch-create-execute-release.md",
+      "sha256": "d09d500f6d69acda1cb952d2b39d3f58e440a7773d015ef3b23a9c56ebc1f20c"
+    },
+    {
+      "path": "docs/adr/069-public-bounded-scratch-observation.md",
+      "sha256": "d1cb57515f1d7bd08db4f2628fc1bfa787240315fbd44f5a311a66ae0a418ed9"
+    },
+    {
+      "path": "docs/adr/070-public-source-only-scratch-export.md",
+      "sha256": "b69ea177eeffd5243c4131d6dd636fadb8053b8d9135815d161e7324d4ef4d09"
+    },
+    {
+      "path": "docs/adr/071-owned-scratch-composition-retirement.md",
+      "sha256": "f813a340067f47719130613fefe3af05058d09a4d9da9eda164f87b71954cbf3"
+    },
+    {
+      "path": "docs/adr/072-portable-windows-owned-worker-lifecycle.md",
+      "sha256": "e08fe786197f14fb55cdce1ebac3d286dd530c50675a63692790df86aa162a67"
+    },
+    {
+      "path": "docs/adr/073-installed-seed-scratch-consumer.md",
+      "sha256": "620eb672d750b88aeb119c249fe6b45df13ef436c1c7d6cac76c9a4fd053a5e2"
+    },
+    {
+      "path": "docs/adr/074-provider-protocol-field-positions.md",
+      "sha256": "5604dcf64cd3e81643b29ea1dcf5a31a92d0ff08e26c8c8272d887309bbd29c3"
+    },
+    {
+      "path": "docs/adr/075-verified-staging-native-restore.md",
+      "sha256": "420350c52df953cd4a4801b832da650c7a1851e167f14884abea2e8b44e74111"
+    },
+    {
+      "path": "proto/agent_meta/execution_backend/v1/execution_backend.proto",
+      "sha256": "3b287f7b97f78bdd681eae481f3aedd131e49e8f319d312231b4325ce1b41e91"
+    },
+    {
+      "path": "proto/agent_meta/public/v1/public.proto",
+      "sha256": "cb3f2710d411f381707c27b18ce0d015d0e293dd6bd4c74227fc3fcc71d981d2"
+    },
+    {
+      "path": "proto/agent_meta/transport/v1/transport.proto",
+      "sha256": "aa61a3241e0411761d6ff4eb851254471ac85cdead47efb7f9cc807c061e7729"
+    }
+  ],
+  "harness_contract_version": "1.1.0",
+  "runtime_commit": "f680e0e0bbb505e9abc98c8add75070da451ebb6",
+  "runtime_version": "0.1.0.dev1",
+  "runtime_wheel_sha256": "8115d1de814eea5f0e7533f70cfe5977d27eaf7b59e0ef482e2b74efdf424f60",
+  "schema": "seed-runtime-contract-bundle/v1",
+  "source_state": "development-worktree"
+}

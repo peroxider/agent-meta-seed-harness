@@ -1,0 +1,139 @@
+// Frozen Execution Backend v1 contract (§41.27, §41.41). The eight session
+// RPCs are Negotiate/Submit/Await/Cancel/Inspect/Reconcile/AcknowledgeTerminal/
+// CloseSession. Field numbers are frozen: fields may only be added; deleted
+// numbers must never be reused. `authority_token` bytes are enforcement-only:
+// they are never logged, never serialized into Facts, and any debug/repr of the
+// token value must render "[REDACTED]".
+
+syntax = "proto3";
+
+package agent_meta.execution_backend.v1;
+
+import "agent_meta/transport/v1/transport.proto";
+
+message ClientHello {
+  repeated agent_meta.transport.v1.VersionRange supported = 1;
+  string client_instance_id = 2;
+  repeated string required_features = 3;
+  repeated string optional_features = 4;
+}
+
+message BackendSession {
+  uint32 protocol_major = 1;
+  uint32 protocol_minor = 2;
+  string backend_id = 3;
+  string session_id = 4;
+  string profile = 5; // PORTABLE|MANAGED|DISTRIBUTED
+  bytes features_jcs = 6;
+  bytes limits_jcs = 7;
+  int64 established_at_us = 8;
+}
+
+message ExecutionRequest {
+  string session_id = 1;
+  string realm_id = 2;
+  string request_id = 3;
+  string operation_kind = 4;
+  string payload_hash = 5;
+  bytes payload_jcs = 6;
+  string idempotency_class = 7;
+  string reversibility = 8;
+  string dedupe_scope = 9;
+  int64 requested_retention_us = 10;
+  int64 deadline_at_us = 11;
+  bytes authority_token = 12; // dropped from logs/Facts after enforcement
+}
+
+message ExecutionHandle {
+  string backend_id = 1;
+  string session_id = 2;
+  bytes opaque_handle = 3;
+  uint64 incarnation = 4;
+  int64 expires_at_us = 5;
+  string request_id = 6;
+}
+
+message ExecutionResult {
+  string status = 1;
+  string request_id = 2;
+  oneof outcome {
+    string result_artifact_id = 3;
+    bytes error_jcs = 5;
+  }
+  bytes usage_jcs = 4;
+  string result_hash = 6;
+  int64 completed_at_us = 7;
+  bool effect_state_unknown = 8;
+}
+
+message ExecutionSnapshot {
+  ExecutionHandle handle = 1;
+  string status = 2;
+  bytes usage_jcs = 3;
+  int64 observed_at_us = 4;
+  ExecutionResult terminal = 5;
+}
+
+message CancelRequest {
+  ExecutionHandle handle = 1;
+  string mode = 2;
+  int64 deadline_at_us = 3;
+}
+
+message CancelReport {
+  string status = 1;
+  bool terminal_confirmed = 2;
+  bytes details_jcs = 3;
+}
+
+message ReconcileRequest {
+  string session_id = 1;
+  string realm_id = 2;
+  repeated KnownBinding known = 3;
+}
+
+message KnownBinding {
+  string semantic_id = 1;
+  string request_id = 2;
+  ExecutionHandle handle = 3;
+  string payload_hash = 4;
+}
+
+message ReconcileReport {
+  repeated ReconciledBinding bindings = 1;
+  repeated OrphanWorkload orphans = 2;
+  int64 observed_at_us = 3;
+}
+
+message ReconciledBinding {
+  KnownBinding known = 1;
+  string status = 2;
+  ExecutionHandle renewed_handle = 3;
+  ExecutionResult terminal = 4;
+}
+
+message OrphanWorkload {
+  ExecutionHandle handle = 1;
+  string request_id = 2;
+  string payload_hash = 3;
+  string recommended_action = 4;
+}
+
+message TerminalAck {
+  string session_id = 1;
+  string request_id = 2;
+  string result_hash = 3;
+}
+
+message AckReport {
+  string status = 1;
+  int64 retained_until_us = 2;
+}
+
+// Addition for CloseSession (§41.27 lists the RPC; the response shape is new
+// in v1 and additive): closing is advisory, in-flight work is not cancelled.
+message CloseReport {
+  string status = 1;
+  string session_id = 2;
+  int64 closed_at_us = 3;
+}
