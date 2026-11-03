@@ -165,7 +165,10 @@ def build_bundle(
     provider_configuration: Mapping | None = None,
     provider_artifacts: Mapping[str,bytes] | None = None,
     tools: bool = False,
+    context_tokenizer_descriptor: Mapping | None = None,
 ) -> PackageBundle:
+    if context_tokenizer_descriptor is not None and provider_configuration is not None:
+        raise ValueError('native Context needs a separately verified Provider request tokenizer before real Provider integration')
     if type(tools) is not bool:
         raise ValueError('tools selection must be a boolean')
     if len(publisher_public_key) != 32:
@@ -261,7 +264,8 @@ def build_bundle(
         task_schema = toolset.input_schema()
     context_profile, context_artifacts = build_context_artifacts(
         input_schema=task_schema, selected_operation_ids=["seed.echo", *toolset.OPERATIONS] if tools else ["seed.echo"],
-        provider_id=provider.model_id if provider is not None else 'fake-tools' if tools else "fake", budget_tokens=16_384)
+        provider_id=provider.model_id if provider is not None else 'fake-tools' if tools else "fake", budget_tokens=16_384,
+        **({'tokenizer_descriptor':dict(context_tokenizer_descriptor)} if context_tokenizer_descriptor is not None else {}))
     artifacts.update(context_artifacts)
     provenance = document({
         "schema": "seed-build-provenance/v1",
@@ -338,7 +342,7 @@ def build_bundle(
         "publisher_identity_artifact_id": add(publisher_public_key),
         # The signature field is excluded from the signing preimage.
         "signature_artifact_id": "artifact://sha256/" + "0" * 64,
-        "public_api_range": ">=1.15.0 <2.0.0" if tools else ">=1.9.0 <2.0.0" if provider is not None else ">=1.0.0 <2.0.0", "harness_contract_range": ">=1.1.0 <2.0.0",
+        "public_api_range": ">=1.16.0 <2.0.0" if context_tokenizer_descriptor is not None else ">=1.15.0 <2.0.0" if tools else ">=1.9.0 <2.0.0" if provider is not None else ">=1.0.0 <2.0.0", "harness_contract_range": ">=1.1.0 <2.0.0",
         "capability_contract_range": ">=1.1.0 <2.0.0" if tools else ">=1.0.0 <2.0.0", "artifact_format": "AMPAK1",
         "capability_descriptor_artifact_ids": sorted(descriptors), "composition_template_artifact_id": composition,
         "grant_requests_artifact_id": grants, "loop_policy_artifact_id": policy,

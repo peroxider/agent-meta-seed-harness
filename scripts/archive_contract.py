@@ -66,6 +66,7 @@ def main():
         "docs/adr/073-installed-seed-scratch-consumer.md",
         "docs/adr/074-provider-protocol-field-positions.md",
         "docs/adr/075-verified-staging-native-restore.md",
+        "docs/adr/076-root-owned-native-context-tokenization.md",
     ])
     inputs.extend(path.relative_to(args.source).as_posix() for path in sorted((args.source / "proto").rglob("*.proto")))
     files = []

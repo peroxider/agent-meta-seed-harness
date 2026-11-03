@@ -39,7 +39,7 @@ class DaemonProcess:
 
 
 @contextmanager
-def daemon_process(root: Path, *, publishers=(), label="daemon", execution_backend=None, controlled_provider_test_ca=None):
+def daemon_process(root: Path, *, publishers=(), label="daemon", execution_backend=None, controlled_provider_test_ca=None, context_tokenizer_json=None):
     data_dir = root / "data"
     initialized = admin(data_dir, "init")
     credential_profile = initialized["features"]["credential_store"]
@@ -49,6 +49,8 @@ def daemon_process(root: Path, *, publishers=(), label="daemon", execution_backe
         arguments.extend(("--execution-backend", execution_backend))
     if controlled_provider_test_ca is not None:
         arguments.extend(('--controlled-provider-test-ca',str(controlled_provider_test_ca)))
+    if context_tokenizer_json is not None:
+        arguments.extend(('--context-tokenizer-json',str(context_tokenizer_json)))
     with output.open("w", encoding="utf-8") as stdout, errors.open("w", encoding="utf-8") as stderr:
         process = subprocess.Popen(command(data_dir, "start", *arguments), cwd=root, stdout=stdout, stderr=stderr,
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
