@@ -207,3 +207,112 @@ def test_lost_write_response_and_owned_daemon_kill_replay_exact_command(tmp_path
             finally:
                 await client.aclose()
         asyncio.run(replay())
+
+
+def test_historical_query_matrix_survives_restart_and_denies_unknown_revisions(tmp_path):
+    bundle, publisher = seed_bundle()
+    with daemon_process(tmp_path, publishers=[publisher], label='history') as owner:
+        authority = create_actor(owner.data_dir, permissions=PERMISSIONS)
+        foreign = create_actor(owner.data_dir, permissions=['state.read', 'state.write'])
+        asyncio.run(install(owner.data_dir, authority, bundle))
+
+        async def build_history():
+            client = await connect(owner.data_dir, authority=authority)
+            try:
+                initial = await initialized(client, authority)
+                revisions = [(initial['state_revision_id'], initial['cas_revision'],
+                              json.loads(await client.get_artifact_content(initial['content_artifact_id'])))]
+                state = initial
+                for value in (2, 3, 4):
+                    content = await upload(client, authority, {'value': value})
+                    state = (await client.write_state(realm_id=REALM, actor_id=authority.actor_id,
+                        state_id=initial['state_id'], expected_state_revision_id=state['state_revision_id'],
+                        expected_cas_revision=state['cas_revision'], schema_id=initial['schema_id'],
+                        content_artifact_id=content)).resource
+                    revisions.append((state['state_revision_id'], state['cas_revision'],
+                                      json.loads(await client.get_artifact_content(state['content_artifact_id']))))
+                # Every retained revision reads back its own exact content
+                # with the current CAS number and a pointer to the current
+                # revision; the revision id is never widened to the head.
+                for revision_id, _, document in revisions:
+                    historical = await client.get_state(realm_id=REALM, actor_id=authority.actor_id,
+                        state_id=initial['state_id'], state_revision_id=revision_id)
+                    assert historical['state_revision_id'] == revision_id
+                    assert historical['cas_revision'] == revisions[-1][1]
+                    assert historical['current_revision_id'] == revisions[-1][0]
+                    assert json.loads(await client.get_artifact_content(historical['content_artifact_id'])) == document
+                # Unknown revisions are refused, never widened to current:
+                # a malformed id fails payload validation, a well-formed but
+                # nonexistent uuid7 fails the store lookup.
+                with pytest.raises(StableError) as missing:
+                    await client.get_state(realm_id=REALM, actor_id=authority.actor_id,
+                        state_id=initial['state_id'], state_revision_id='state-revision://' + 'f' * 64)
+                assert missing.value.code == 'INVALID_ARGUMENT'
+                unknown = 'state-revision://019a44d0-7fff-7000-8000-' + 'f' * 12
+                with pytest.raises(StableError) as absent:
+                    await client.get_state(realm_id=REALM, actor_id=authority.actor_id,
+                        state_id=initial['state_id'], state_revision_id=unknown)
+                assert absent.value.code == 'NOT_FOUND'
+                # Ordinary GENERAL-purpose history is readable by any other
+                # authorized actor, still redacted; controller-protected
+                # purposes deny foreign readers (covered by the bypass test).
+                outsider = await connect(owner.data_dir, authority=foreign)
+                try:
+                    historical = await outsider.get_state(realm_id=REALM, actor_id=foreign.actor_id,
+                        state_id=initial['state_id'], state_revision_id=revisions[0][0])
+                    assert json.loads(await outsider.get_artifact_content(historical['content_artifact_id'])) == revisions[0][2]
+                finally:
+                    await outsider.aclose()
+                return initial, revisions
+            finally:
+                await client.aclose()
+
+        initial, revisions = asyncio.run(build_history())
+        owner.process.kill()
+        owner.process.wait(timeout=10)
+    with daemon_process(tmp_path, publishers=[publisher], label='history-restart') as recovered:
+        async def verify_history():
+            client = await connect(recovered.data_dir, authority=authority)
+            try:
+                for revision_id, _, document in revisions:
+                    historical = await client.get_state(realm_id=REALM, actor_id=authority.actor_id,
+                        state_id=initial['state_id'], state_revision_id=revision_id)
+                    assert historical['state_revision_id'] == revision_id
+                    assert historical['cas_revision'] == revisions[-1][1]
+                    assert json.loads(await client.get_artifact_content(historical['content_artifact_id'])) == document
+            finally:
+                await client.aclose()
+
+        asyncio.run(verify_history())
+
+
+def test_revoked_authority_keeps_committed_replay_and_denies_new_commands(state_environment):
+    data, authority = state_environment
+
+    async def run():
+        client = await connect(data, authority=authority)
+        try:
+            initial = await initialized(client, authority)
+            replacement = await upload(client, authority, {'value': 2})
+            command = client.build_state_write(realm_id=REALM, actor_id=authority.actor_id,
+                state_id=initial['state_id'], expected_state_revision_id=initial['state_revision_id'],
+                expected_cas_revision=1, schema_id=initial['schema_id'], content_artifact_id=replacement)
+            receipt = await client.execute_command(WRITE, command)
+            assert receipt.resource['cas_revision'] == 2
+            # Exact replay stays idempotent while the signing grant is live.
+            assert await client.execute_command(WRITE, command) == receipt
+            next_revision = await upload(client, authority, {'value': 3})
+            # Revoking the signing grant never erases committed outcomes: the
+            # already-accepted command still replays its durable receipt, but
+            # any NEW command under the revoked grant is denied immediately.
+            admin(data, 'authority', 'revoke', authority.authority_grant_id)
+            assert await client.execute_command(WRITE, command) == receipt
+            with pytest.raises(StableError) as denied:
+                await client.write_state(realm_id=REALM, actor_id=authority.actor_id,
+                    state_id=initial['state_id'], expected_state_revision_id=receipt.resource['state_revision_id'],
+                    expected_cas_revision=2, schema_id=initial['schema_id'], content_artifact_id=next_revision)
+            assert denied.value.code == 'AUTHORITY_DENIED'
+        finally:
+            await client.aclose()
+
+    asyncio.run(run())

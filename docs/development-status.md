@@ -76,7 +76,12 @@ explain a round's lineage from transcript, journal and public Task trace;
 - Public inspection returns bounded Task/Invocation/projection metadata and
   ordinary Artifact content with independent size/hash verification. It does
   not expose Restricted content or native objects. Literal zero deadlines and
-  malformed budgets are handled without implicit widening.
+  malformed budgets are handled without implicit widening. The public State
+  matrix now covers every retained historical revision across a daemon
+  restart (exact per-revision content, current CAS/pointer, unknown revision
+  refusal, redacted cross-actor history reads) and the revocation boundary:
+  an already-accepted command keeps replaying its durable receipt after grant
+  revocation, while any new command under the revoked grant is denied.
 - Actual daemon process-loss tests preserve confirmed model/tool results,
   counters and IDs, reconstruct history without redispatch and stop UNKNOWN
   outcomes. Upgrade tests cover cutover, frozen confirmed-work drain, removal
