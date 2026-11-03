@@ -1,0 +1,13 @@
+{
+  "activation_status": "PREPARATION_ONLY",
+  "files": {
+    "src/agent_meta_seed_harness/schemas/seed/session-command-journal/v1.json": "74ba6e63e5fb5f3a9a176bd13e18db9c7a7e7520ea95b7524ffd0f5bc16e471c",
+    "src/agent_meta_seed_harness/schemas/seed/session/v1.json": "cc69910bdaf69cc06a0589770b370e55c0bd26c50e38073d6b05dfd7ff80ed37",
+    "tests/fixtures/session/empty-v1.json": "1c7d51251997294107fb2af2311c20ec262b53814a8972d29e272cc7d9d706dd",
+    "tests/fixtures/session/journal-empty-v1.json": "7ac2608298b821dc00499fc4b3eb2ece057c2dfcb024d0035a6d60084a20b027"
+  },
+  "maximum_committed_messages": 128,
+  "maximum_document_bytes": 524288,
+  "migration_policy": "IDENTICAL_SCHEMA_ONLY_NO_AUTOMATIC_MIGRATION",
+  "schema": "seed-session-document-fixtures/v1"
+}

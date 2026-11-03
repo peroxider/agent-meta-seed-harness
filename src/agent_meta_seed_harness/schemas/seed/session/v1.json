@@ -1,0 +1,253 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "config": {
+      "additionalProperties": false,
+      "properties": {
+        "composition_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "controller_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "journal_state_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "policy_artifact_id": {
+          "maxLength": 82,
+          "minLength": 1,
+          "type": "string"
+        },
+        "realm_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "transcript_state_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "realm_id",
+        "controller_id",
+        "composition_id",
+        "transcript_state_id",
+        "journal_state_id",
+        "policy_artifact_id"
+      ],
+      "type": "object"
+    },
+    "messages": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "input_artifact_id": {
+            "maxLength": 82,
+            "minLength": 1,
+            "type": "string"
+          },
+          "message_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "result_artifact_id": {
+            "maxLength": 82,
+            "minLength": 1,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "task_id": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "terminal_status": {
+            "enum": [
+              "SUCCEEDED",
+              "FAILED",
+              "FAILED_RECOVERY",
+              "TIMED_OUT",
+              "CANCELLED"
+            ]
+          }
+        },
+        "required": [
+          "message_id",
+          "input_artifact_id",
+          "task_id",
+          "terminal_status",
+          "result_artifact_id"
+        ],
+        "type": "object"
+      },
+      "maxItems": 128,
+      "type": "array"
+    },
+    "pending": {
+      "additionalProperties": false,
+      "properties": {
+        "input_artifact_id": {
+          "maxLength": 82,
+          "minLength": 1,
+          "type": "string"
+        },
+        "journal_state_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "message_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "submit_command_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "task_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "writeback_command_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "message_id",
+        "input_artifact_id",
+        "task_id",
+        "submit_command_id",
+        "writeback_command_id",
+        "journal_state_id"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "schema": {
+      "const": "seed/session/v1"
+    },
+    "session_id": {
+      "maxLength": 255,
+      "minLength": 1,
+      "type": "string"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "content_artifact_id": {
+          "maxLength": 82,
+          "minLength": 1,
+          "type": "string"
+        },
+        "covered_messages": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "input_artifact_id": {
+                "maxLength": 82,
+                "minLength": 1,
+                "type": "string"
+              },
+              "message_id": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "result_artifact_id": {
+                "maxLength": 82,
+                "minLength": 1,
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "task_id": {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "message_id",
+              "input_artifact_id",
+              "task_id",
+              "result_artifact_id"
+            ],
+            "type": "object"
+          },
+          "maxItems": 128,
+          "minItems": 1,
+          "type": "array"
+        },
+        "redaction_policy_artifact_id": {
+          "maxLength": 82,
+          "minLength": 1,
+          "type": "string"
+        },
+        "renderer_artifact_id": {
+          "maxLength": 82,
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_transcript_revision_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "tokenizer_artifact_id": {
+          "maxLength": 82,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "covered_messages",
+        "content_artifact_id",
+        "renderer_artifact_id",
+        "tokenizer_artifact_id",
+        "redaction_policy_artifact_id",
+        "source_transcript_revision_id"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "session_id",
+    "config",
+    "messages",
+    "summary",
+    "pending"
+  ],
+  "type": "object"
+}

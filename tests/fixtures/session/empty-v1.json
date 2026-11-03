@@ -1,0 +1,15 @@
+{
+  "config": {
+    "composition_id": "composition://019a44d0-0000-7000-8000-000000000001",
+    "controller_id": "principal://agent/019a44d0-0000-7000-8000-000000000001",
+    "journal_state_id": "state://019a44d0-0000-7000-8000-000000000002",
+    "policy_artifact_id": "artifact://sha256/1111111111111111111111111111111111111111111111111111111111111111",
+    "realm_id": "realm://main",
+    "transcript_state_id": "state://019a44d0-0000-7000-8000-000000000001"
+  },
+  "messages": [],
+  "pending": null,
+  "schema": "seed/session/v1",
+  "session_id": "session://019a44d0-0000-7000-8000-000000000001",
+  "summary": null
+}

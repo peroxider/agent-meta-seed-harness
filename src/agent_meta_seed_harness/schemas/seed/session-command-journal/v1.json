@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "entries": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "command_jcs": {
+            "maxLength": 16384,
+            "minLength": 1,
+            "type": "string"
+          },
+          "command_sha256": {
+            "maxLength": 64,
+            "minLength": 64,
+            "type": "string"
+          },
+          "message_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "agent_meta.public.v1.Task.Submit",
+              "agent_meta.public.v1.State.Write"
+            ]
+          },
+          "stage": {
+            "enum": [
+              "SUBMIT",
+              "WRITEBACK"
+            ]
+          }
+        },
+        "required": [
+          "message_id",
+          "stage",
+          "method",
+          "command_id",
+          "command_sha256",
+          "command_jcs"
+        ],
+        "type": "object"
+      },
+      "maxItems": 256,
+      "type": "array"
+    },
+    "schema": {
+      "const": "seed/session-command-journal/v1"
+    },
+    "session_id": {
+      "maxLength": 255,
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "session_id",
+    "entries"
+  ],
+  "type": "object"
+}
