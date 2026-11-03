@@ -35,7 +35,13 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   frozen Task retain identical identity, provenance and rendered content.
 - Loop/tool tests cover complete normalized terminal arrays, LENGTH, free-text
   non-dispatch, ordered history, schemas, policy/Task limits, 16/17 tool calls,
-  global call IDs and stop/continue-on-error behavior. Host tests cover frozen
+  global call IDs and stop/continue-on-error behavior. The default loop's Task
+  fact trace registers exactly the content-addressed projection manifest and no
+  raw provider response artifact, and every inspected MODEL invocation output is
+  normalized multipart bytes; the frozen loop policy schema rejects a
+  raw-retention field, while saving an explicit-policy Restricted Raw Artifact
+  has no public Host facade under the pinned Runtime contract, like Epoch
+  succession. Host tests cover frozen
   DTOs, task-free health, unissued calls/projections/terminals, expired deadlines,
   active-call timeout/cancellation and scoped activation-grant exhaustion.
 - Public inspection returns bounded Task/Invocation/projection metadata and
