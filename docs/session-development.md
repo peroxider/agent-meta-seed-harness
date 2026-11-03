@@ -109,8 +109,9 @@ exact replay. It never dispatches a Task or reads private storage.
 The redaction canary separately proves that changed command bytes are refused
 before recovery can execute a command.
 
-`tests/session_runtime.py` now implements the plan's message protocol as a
-consumer-side coordinator over public SDK State CAS and exact signed commands:
+`agent_meta_seed_harness/session_coordinator.py` now implements the plan's
+message protocol as a consumer-side coordinator over public SDK State CAS and
+exact signed commands:
 reserve pending before dispatch, journal the signed bytes before Task.Submit,
 write the receipt back, wait for the committed terminal, register the writeback
 journal entry, then append the message once and clear pending. It never
@@ -149,3 +150,20 @@ Input redaction receipts, frozen Context integration of committed history and
 summaries (the model input still carries only the current message) and
 release evidence remain required. Passing recovery tests does not close
 SH-SESS-01/02's release evidence, RP-05 or the session profile.
+
+`agent_meta_seed_harness/repl.py` is the plan's minimal interactive front-end
+and diagnostics layer (steps 4/5). `next_message_id` proposes stable,
+deterministic message identities from the observed document. A REPL attach
+recovers any pending round before new admission: an unjournaled pending
+message is submitted as a new durable identity, journaled bytes are replayed
+exactly, and an observed receipt only waits for the terminal. Each free-text
+line then drives one complete durable round through the coordinator; there is
+no new protocol surface. `/history` lists committed and pending rounds and
+`/explain <message_id>` explains any round from public records only: the
+committed or pending fields, the journal's stage entries with command
+identities and hashes and, for committed rounds, the public Task trace's
+composition and action count. Unknown messages and malformed traces fail
+closed. `tests/contract/test_session_repl.py` proves stable identity
+determinism, two scripted rounds with `/history` and `/explain`, and attach
+recovery of an interrupted round (exactly one model call per round across the
+restart, journal stages SUBMIT/WRITEBACK per message) against a real daemon.

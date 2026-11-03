@@ -8,18 +8,15 @@ dispatches across daemon generations.
 """
 
 import asyncio
+import json
+from pathlib import Path
 
 import pytest
 
 from agent_meta_runtime.sdk import connect
 from agent_meta_runtime.sdk.packages import canonical_json
 
-from recovery_runtime import probe_events
-from seed_actor import create_actor
-from seed_package import activate_seed, install_seed, seed_bundle, wait_ready
-from seed_runtime import daemon_process
-
-from session_runtime import (
+from agent_meta_seed_harness.session_coordinator import (
     PERMISSIONS,
     SUBMIT_METHOD,
     WRITEBACK_METHOD,
@@ -27,8 +24,16 @@ from session_runtime import (
     reattach,
 )
 
+from recovery_runtime import probe_events
+from seed_actor import create_actor
+from seed_package import activate_seed, install_seed, seed_bundle, wait_ready
+from seed_runtime import daemon_process
+
 SUBMIT_1 = "task://019a44d0-0000-7000-8000-000000000001"
 WRITEBACK_1 = "task://019a44d0-0000-7000-8000-000000000002"
+SESSION_DOCUMENT = json.loads(
+    (Path(__file__).resolve().parents[1] / "fixtures/session/empty-v1.json").read_bytes()
+)
 
 PROVIDER = b'''
 import asyncio
@@ -84,7 +89,7 @@ def test_pending_before_submit_recovers_without_new_task(tmp_path):
         async def reserve_only():
             client = await connect(first.data_dir, authority=authority)
             try:
-                session = await open_session(client, authority)
+                session = await open_session(client, authority, SESSION_DOCUMENT)
                 await session.reserve("message-1", "canary")
                 return session
             finally:
@@ -127,7 +132,7 @@ def test_ambiguous_journal_write_recovers_registered_bytes(tmp_path):
         async def journal_then_die():
             client = await connect(first.data_dir, authority=authority)
             try:
-                session = await open_session(client, authority)
+                session = await open_session(client, authority, SESSION_DOCUMENT)
                 await session.reserve("message-1", "canary")
                 await session.journal_submit(SUBMIT_1)
                 return session
@@ -176,7 +181,7 @@ def test_lost_submit_receipt_replays_original_command(tmp_path):
         async def submit_and_lose_receipt():
             client = await connect(first.data_dir, authority=authority)
             try:
-                session = await open_session(client, authority)
+                session = await open_session(client, authority, SESSION_DOCUMENT)
                 await session.reserve("message-1", "canary")
                 envelope = await session.journal_submit(SUBMIT_1)
                 receipt = await client.execute_command(SUBMIT_METHOD, envelope)
@@ -227,7 +232,7 @@ def test_terminal_before_writeback_recovers_without_redispatch(tmp_path):
         async def observe_terminal():
             client = await connect(first.data_dir, authority=authority)
             try:
-                session = await open_session(client, authority)
+                session = await open_session(client, authority, SESSION_DOCUMENT)
                 await session.reserve("message-1", "canary")
                 task_id = await session.submit_pending(SUBMIT_1)
                 result, terminal = await client.wait_task(task_id, timeout_s=15)
@@ -273,7 +278,7 @@ def test_writeback_response_loss_confirms_exactly_one_append(tmp_path):
         async def commit_writeback():
             client = await connect(first.data_dir, authority=authority)
             try:
-                session = await open_session(client, authority)
+                session = await open_session(client, authority, SESSION_DOCUMENT)
                 await session.reserve("message-1", "canary")
                 await session.submit_pending(SUBMIT_1)
                 result, terminal = await client.wait_task(
@@ -323,7 +328,7 @@ def test_failed_and_cancelled_terminals_are_recorded_without_redispatch(tmp_path
         async def run():
             client = await connect(first.data_dir, authority=authority)
             try:
-                session = await open_session(client, authority)
+                session = await open_session(client, authority, SESSION_DOCUMENT)
                 # A declared failed terminal is committed to the transcript.
                 await session.reserve("message-1", "canary", scenario="unknown_tool")
                 task_id = await session.submit_pending(SUBMIT_1)
@@ -368,7 +373,7 @@ def test_seed_upgrade_preserves_committed_session_and_continues(tmp_path):
         async def run():
             client = await connect(owner.data_dir, authority=authority)
             try:
-                session = await open_session(client, authority)
+                session = await open_session(client, authority, SESSION_DOCUMENT)
                 await session.reserve("message-1", "before upgrade")
                 task_id = await session.submit_pending(SUBMIT_1)
                 before = await client.get_task_trace(task_id)

@@ -7,6 +7,7 @@ dedup, conflicts, journal registration and projections follow the S06 plan.
 import asyncio
 import copy
 import json
+from pathlib import Path
 
 import pytest
 
@@ -15,6 +16,12 @@ from agent_meta_runtime.sdk.context import SECTION_DELIMITER
 from agent_meta_runtime.sdk.packages import canonical_json, sha256_hex
 
 from agent_meta_seed_harness.session import SessionConflict, validate_session
+from agent_meta_seed_harness.session_coordinator import (
+    PERMISSIONS,
+    WRITEBACK_METHOD,
+    message_input,
+    open_session,
+)
 
 from contract.test_public_state_management import REALM, upload
 
@@ -22,18 +29,14 @@ from seed_actor import create_actor
 from seed_package import install_seed, seed_bundle, wait_ready
 from seed_runtime import daemon_process
 
-from session_runtime import (
-    PERMISSIONS,
-    WRITEBACK_METHOD,
-    message_input,
-    open_session,
-)
-
 SESSION = "session://019a44d0-0000-7000-8000-000000000001"
 SUBMIT_1 = "task://019a44d0-0000-7000-8000-000000000001"
 WRITEBACK_1 = "task://019a44d0-0000-7000-8000-000000000002"
 SUBMIT_2 = "task://019a44d0-0000-7000-8000-000000000003"
 WRITEBACK_2 = "task://019a44d0-0000-7000-8000-000000000004"
+SESSION_DOCUMENT = json.loads(
+    (Path(__file__).resolve().parents[1] / "fixtures/session/empty-v1.json").read_bytes()
+)
 
 
 @pytest.fixture
@@ -61,7 +64,7 @@ def test_message_retry_conflict_and_concurrency_preserve_one_task_per_message(
     async def scenario():
         client = await connect(data, authority=authority)
         try:
-            session = await open_session(client, authority)
+            session = await open_session(client, authority, SESSION_DOCUMENT)
             await session.reserve("message-1", "first")
             await session.submit_pending(SUBMIT_1)
             await session.complete_pending(WRITEBACK_1)
@@ -109,7 +112,7 @@ def test_journal_write_preserves_transcript_revision_and_retains_signed_bytes(
     async def scenario():
         client = await connect(data, authority=authority)
         try:
-            session = await open_session(client, authority)
+            session = await open_session(client, authority, SESSION_DOCUMENT)
             await session.reserve("message-1", "first")
             task_id = await session.submit_pending(SUBMIT_1)
             result, terminal = await client.wait_task(task_id, timeout_s=15)
@@ -148,7 +151,7 @@ def test_model_projection_carries_only_current_input_without_control_fields(
     async def scenario():
         client = await connect(data, authority=authority)
         try:
-            session = await open_session(client, authority)
+            session = await open_session(client, authority, SESSION_DOCUMENT)
             await session.reserve("message-1", "PROJECTION_CANARY")
             task_id = await session.submit_pending(SUBMIT_1)
             await session.complete_pending(WRITEBACK_1)
@@ -198,7 +201,7 @@ def test_external_transcript_conflict_stops_round_without_merge_or_redispatch(
     async def scenario():
         client = await connect(data, authority=authority)
         try:
-            session = await open_session(client, authority)
+            session = await open_session(client, authority, SESSION_DOCUMENT)
             await session.reserve("message-1", "first")
             task_id = await session.submit_pending(SUBMIT_1)
             # An external writer resolves the same transcript independently.
@@ -241,7 +244,7 @@ def test_summary_provenance_commits_against_history_and_serving_stays_frozen(
     async def scenario():
         client = await connect(data, authority=authority)
         try:
-            session = await open_session(client, authority)
+            session = await open_session(client, authority, SESSION_DOCUMENT)
             servings = []
             compositions = []
             for index, (submit_id, writeback_id) in enumerate(

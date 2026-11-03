@@ -1,15 +1,17 @@
-"""Public-SDK session coordinator shared by the named S06 proofs.
+"""Consumer-side session coordinator (S06) over public SDK contracts only.
 
-Implements the plan's message protocol (reserve -> journal -> Task.Submit ->
-receipt -> terminal -> writeback) using only State CAS, exact signed public
-commands and the frozen session/journal schemas. No Runtime implementation,
-storage or key material is read, and no convenience retry generates a new
-command identity. Contract and acceptance evidence drive this one path.
+Drives the plan's message protocol: reserve pending via State CAS, journal
+the exact signed Task.Submit bytes, dispatch once, record the receipt, wait
+for the committed terminal, journal the writeback, then append once. Durable
+command identities live in the journal; a restart recovers from committed
+State only and never regenerates a journaled command identity.
 """
 
 import copy
 import json
-from pathlib import Path
+
+from agent_meta_runtime.sdk import decode_command
+from agent_meta_runtime.sdk.packages import canonical_json
 
 from agent_meta_seed_harness.session import (
     JOURNAL_SCHEMA,
@@ -25,11 +27,10 @@ from agent_meta_seed_harness.session import (
     validate_session,
 )
 
-from contract.test_public_state_management import REALM, OWNER, upload
-
 SUBMIT_METHOD = "agent_meta.public.v1.Task.Submit"
 WRITEBACK_METHOD = "agent_meta.public.v1.State.Write"
-FIXTURES = Path(__file__).resolve().parent / "fixtures/session"
+REALM = "realm://main"
+OWNER = "capability://seed.echo"
 PERMISSIONS = [
     "artifact.put",
     "task.submit",
@@ -44,6 +45,16 @@ PERMISSIONS = [
 def message_input(value, *, scenario="terminal"):
     """Bounded deterministic task input for the offline fake Provider."""
     return {"provider": "fake", "scenario": scenario, "value": value}
+
+
+async def upload(client, authority, value, *, kind="seed_content"):
+    return (
+        await client.put_artifact(
+            realm_id=REALM, actor_id=authority.actor_id,
+            content=canonical_json(value),
+            kind=kind, media_type="application/json",
+        )
+    )["artifact_id"]
 
 
 class SessionCoordinator:
@@ -146,8 +157,12 @@ class SessionCoordinator:
         await self._write_transcript(pending)
         return pending
 
-    async def journal_submit(self, submit_id):
-        """Journal the exact signed Task.Submit bytes before any dispatch."""
+    async def journal_submit(self, submit_id=None):
+        """Journal the exact signed Task.Submit bytes before any dispatch.
+
+        Without an explicit identity the public SDK generates the stable
+        ``task://<UUIDv7>`` command id inside the signed envelope bytes.
+        """
         document = self.document
         envelope = self.client.build_envelope_jcs(
             realm_id=REALM, actor_id=self.authority.actor_id,
@@ -190,14 +205,14 @@ class SessionCoordinator:
         validate_session(coordinated)
         await self._write_transcript(coordinated)
 
-    async def submit_pending(self, submit_id):
+    async def submit_pending(self, submit_id=None):
         """Journal first, dispatch the exact bytes once, then record the receipt."""
         envelope = await self.journal_submit(submit_id)
         receipt = await self.client.execute_command(SUBMIT_METHOD, envelope)
         task_id = receipt.resource["task_id"]
-        self.submitted.append(submit_id)
+        self.submitted.append(decode_command(envelope).command_id)
         self.submit_receipts.append(receipt)
-        await self.record_receipt(task_id, submit_id)
+        await self.record_receipt(task_id, decode_command(envelope).command_id)
         return task_id
 
     async def register_writeback(self, writeback_id, result):
@@ -245,7 +260,7 @@ class SessionCoordinator:
         receipt = await self._write_transcript(committed, envelope=envelope)
         return receipt
 
-    async def complete_pending(self, writeback_id):
+    async def complete_pending(self, writeback_id=None):
         """Terminal first, then journal, then one transcript append."""
         result, terminal = await self.client.wait_task(
             self.document["pending"]["task_id"], timeout_s=15
@@ -253,6 +268,32 @@ class SessionCoordinator:
         assert terminal, result
         envelope, committed = await self.register_writeback(writeback_id, result)
         return await self.commit_writeback(envelope, committed)
+
+    async def recover_pending(self, *, writeback_id=None):
+        """Recover a pending round from committed State before new admission.
+
+        Restart order is pending first: an unjournaled pending message is
+        submitted as a new durable identity; an ambiguous or accepted submit
+        replays the exact journaled bytes; an observed receipt only waits for
+        the terminal. ``None`` when nothing is pending.
+        """
+        document = await self.observe_transcript()
+        pending = document["pending"]
+        if pending is None:
+            return None
+        journal = await self.observe_journal()
+        if pending["task_id"] is None and any(
+            entry["message_id"] == pending["message_id"] and entry["stage"] == "SUBMIT"
+            for entry in journal["entries"]
+        ):
+            envelope = await self.recover_pending_dispatch(pending["message_id"])
+            receipt = await self.client.execute_command(SUBMIT_METHOD, envelope)
+            command_id = decode_command(envelope).command_id
+            await self.record_receipt(receipt.resource["task_id"], command_id)
+        elif pending["task_id"] is None:
+            await self.submit_pending()
+        await self.complete_pending(writeback_id)
+        return await self.observe_transcript()
 
     async def commit_document(self, document):
         """CAS-commit an independently prepared transcript document."""
@@ -264,10 +305,12 @@ class SessionCoordinator:
         return completed_context(self.document)
 
 
-async def open_session(client, authority):
-    """Create the bound transcript/journal States from the frozen fixtures."""
-    document = json.loads((FIXTURES / "empty-v1.json").read_bytes())
-    document["config"]["controller_id"] = authority.actor_id
+async def open_session(client, authority, document):
+    """Create the bound transcript/journal States from an initial document."""
+    document = validate_session({
+        **document,
+        "config": {**document["config"], "controller_id": authority.actor_id},
+    })
     schema = await upload(client, authority, document_schema(SESSION_SCHEMA), kind="schema")
     journal_schema = await upload(client, authority, document_schema(JOURNAL_SCHEMA), kind="schema")
     transcript = (

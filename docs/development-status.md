@@ -53,8 +53,8 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   JSON fields as a declared INVALID_ARGUMENT; state writes stay CAS-guarded
   with per-operation refusal codes, bounded artifact reads and redaction as
   recorded below.
-- A consumer-side session coordinator (`tests/session_runtime.py`) now drives
-  the S06 message protocol over public State CAS and exact signed commands
+- A consumer-side session coordinator (`agent_meta_seed_harness/session_coordinator.py`)
+  now drives the S06 message protocol over public State CAS and exact signed commands
   against a real daemon: identical retries recover the original operation, a
   different input or a second pending message is a conflict, journal
   registration retains exact signed bytes without moving the transcript CAS
@@ -68,7 +68,11 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   and recovers from committed State only, replaying exact journaled bytes
   with one Task, one model call and one append per message; failed and
   cancelled terminals are recorded without redispatch and a Seed upgrade
-  preserves both session States.
+  preserves both session States. The plan's minimal front-end and round
+diagnostics (`agent_meta_seed_harness/repl.py`) propose stable message
+identities, recover any pending round on attach before new admission and
+explain a round's lineage from transcript, journal and public Task trace;
+`tests/contract/test_session_repl.py` proves both against a real daemon.
 - Public inspection returns bounded Task/Invocation/projection metadata and
   ordinary Artifact content with independent size/hash verification. It does
   not expose Restricted content or native objects. Literal zero deadlines and
