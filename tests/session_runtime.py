@@ -16,6 +16,7 @@ from agent_meta_seed_harness.session import (
     SESSION_SCHEMA,
     SUBMIT,
     WRITEBACK,
+    SessionConflict,
     completed_context,
     document_schema,
     register_command,
@@ -32,6 +33,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures/session"
 PERMISSIONS = [
     "artifact.put",
     "task.submit",
+    "task.cancel",
     "model.invoke",
     "capability.invoke",
     "state.read",
@@ -39,9 +41,9 @@ PERMISSIONS = [
 ]
 
 
-def message_input(value):
+def message_input(value, *, scenario="terminal"):
     """Bounded deterministic task input for the offline fake Provider."""
-    return {"provider": "fake", "scenario": "terminal", "value": value}
+    return {"provider": "fake", "scenario": scenario, "value": value}
 
 
 class SessionCoordinator:
@@ -131,18 +133,21 @@ class SessionCoordinator:
         self.journal_state = registered
         return receipt
 
-    async def reserve(self, message_id, value):
+    async def reserve(self, message_id, value, *, scenario="terminal"):
         """Persist pending before any dispatch; identical retries change nothing."""
         document = await self.observe_transcript()
-        reference = await upload(self.client, self.authority, message_input(value), kind="task_input")
+        reference = await upload(
+            self.client, self.authority, message_input(value, scenario=scenario),
+            kind="task_input",
+        )
         pending = reserve_message(document, message_id, reference)
         if pending == document:
             return document
         await self._write_transcript(pending)
         return pending
 
-    async def submit_pending(self, submit_id):
-        """Journal the exact signed bytes, then dispatch; never a second Task."""
+    async def journal_submit(self, submit_id):
+        """Journal the exact signed Task.Submit bytes before any dispatch."""
         document = self.document
         envelope = self.client.build_envelope_jcs(
             realm_id=REALM, actor_id=self.authority.actor_id,
@@ -157,15 +162,42 @@ class SessionCoordinator:
         )
         if registered != journal:
             await self._write_journal(registered)
-        receipt = await self.client.execute_command(SUBMIT_METHOD, envelope)
-        task_id = receipt.resource["task_id"]
-        self.submitted.append(submit_id)
-        self.submit_receipts.append(receipt)
-        coordinated = copy.deepcopy(document)
+        return envelope
+
+    async def recover_pending_dispatch(self, message_id):
+        """Recover the durable journaled submit bytes after an ambiguous write.
+
+        Journal-write response loss is resolved by an audited read of the
+        original message/stage entry; the exact registered bytes are replayed,
+        never regenerated, and a genuinely missing entry fails this lookup.
+        """
+        journal = await self.observe_journal()
+        entries = [
+            entry for entry in journal["entries"]
+            if entry["message_id"] == message_id and entry["stage"] == "SUBMIT"
+        ]
+        if len(entries) != 1:
+            raise SessionConflict(
+                "journal does not hold exactly one durable submit entry"
+            )
+        return entries[0]["command_jcs"]
+
+    async def record_receipt(self, task_id, submit_id):
+        """Write the accepted Task receipt back into the pending item."""
+        coordinated = copy.deepcopy(self.document)
         coordinated["pending"]["task_id"] = task_id
         coordinated["pending"]["submit_command_id"] = submit_id
         validate_session(coordinated)
         await self._write_transcript(coordinated)
+
+    async def submit_pending(self, submit_id):
+        """Journal first, dispatch the exact bytes once, then record the receipt."""
+        envelope = await self.journal_submit(submit_id)
+        receipt = await self.client.execute_command(SUBMIT_METHOD, envelope)
+        task_id = receipt.resource["task_id"]
+        self.submitted.append(submit_id)
+        self.submit_receipts.append(receipt)
+        await self.record_receipt(task_id, submit_id)
         return task_id
 
     async def register_writeback(self, writeback_id, result):
@@ -183,7 +215,8 @@ class SessionCoordinator:
             "input_artifact_id": pending["input_artifact_id"],
             "task_id": pending["task_id"],
             "terminal_status": result["status"],
-            "result_artifact_id": result.get("result_artifact_id"),
+            # Non-terminal outcomes report an empty reference, not None.
+            "result_artifact_id": result.get("result_artifact_id") or None,
         })
         validate_session(committed)
         reference = await upload(self.client, self.authority, committed)
@@ -260,4 +293,20 @@ async def open_session(client, authority):
     ).resource
     return SessionCoordinator(
         client, authority, transcript, journal, schema=schema, journal_schema=journal_schema
+    )
+
+
+async def reattach(client, authority, coordinator):
+    """Rebind a coordinator to restarted daemon state from committed State only."""
+    transcript = await client.get_state(
+        realm_id=REALM, actor_id=authority.actor_id,
+        state_id=coordinator.transcript["state_id"],
+    )
+    journal = await client.get_state(
+        realm_id=REALM, actor_id=authority.actor_id,
+        state_id=coordinator.journal["state_id"],
+    )
+    return SessionCoordinator(
+        client, authority, transcript, journal,
+        schema=coordinator.schema, journal_schema=coordinator.journal_schema,
     )

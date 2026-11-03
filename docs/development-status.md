@@ -61,8 +61,14 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   and replays idempotently, the model projection's task_input body carries
   only the current input, an external transcript CAS conflict stops the round
   without merge or redispatch, summary provenance commits against real
-  committed history, and rounds share one frozen serving revision. Per-point
-  crash recovery (`test_session_recovery.py`, SH-SESS-02) remains absent.
+  committed history, and rounds share one frozen serving revision. The named
+  SH-SESS-02 recovery proof (`test_session_recovery.py`) kills the daemon at
+  each protocol boundary — pending before submit, ambiguous journal write,
+  lost submit receipt, terminal before writeback, writeback response loss —
+  and recovers from committed State only, replaying exact journaled bytes
+  with one Task, one model call and one append per message; failed and
+  cancelled terminals are recorded without redispatch and a Seed upgrade
+  preserves both session States.
 - Public inspection returns bounded Task/Invocation/projection metadata and
   ordinary Artifact content with independent size/hash verification. It does
   not expose Restricted content or native objects. Literal zero deadlines and

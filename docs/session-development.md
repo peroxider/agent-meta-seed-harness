@@ -128,10 +128,24 @@ committed history at a real source revision, and both rounds' Tasks run under
 one frozen serving revision/composition. Terminal status is taken from
 Task.Wait only; the pending item never carries terminal fields.
 
-The required `test_session_recovery.py` gate (SH-SESS-02) remains absent.
-Per-point kill/restart recovery across pending/submit/receipt/terminal/
-writeback, input redaction receipts, frozen Context integration of committed
-history and summaries (the model input still carries only the current
-message), cancellation/failure/UNKNOWN outcomes, upgrade preservation and
-release evidence remain required. Passing consistency tests does not close
-SH-SESS-01's release evidence, SH-SESS-02, RP-05 or the session profile.
+`test_session_recovery.py` (SH-SESS-02) kills the owned daemon at each named
+protocol boundary and restarts a fresh coordinator that recovers from
+committed State only: pending persisted before submit (journal still empty,
+dispatch then happens once), an ambiguous journal write (recovered by reading
+the registered message/stage entry and replaying those exact bytes), an
+accepted Task whose submit receipt was lost (the original command replays to
+the same Task identity; the fresh incarnation never submits), a terminal
+observed before writeback (re-waiting returns the committed terminal without
+a model call), and a committed writeback whose response was lost (exactly one
+message stays appended and the writeback command replays idempotently). Each
+scenario counts real model dispatches through Provider probe events across
+daemon generations and asserts exactly one Task, one append and no
+redispatch. Declared failed and cancelled terminals are recorded with a null
+result reference and never resubmitted, and a Seed package upgrade preserves
+both session States while the next message runs under the new serving
+composition.
+
+Input redaction receipts, frozen Context integration of committed history and
+summaries (the model input still carries only the current message) and
+release evidence remain required. Passing recovery tests does not close
+SH-SESS-01/02's release evidence, RP-05 or the session profile.
