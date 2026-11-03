@@ -16,6 +16,15 @@ adoption. Its fresh installed full Seed regression passed all 393 cases, includi
 seven native Scratch cases and 28 session document cases, with both non-editable
 distributions byte-verified. Evidence: `reports/recovery-v1-installed/reports/installed-bytes.json`.
 
+A later fresh Windows consumer on the same Runtime pin passed all 410 provided
+Seed tests with Seed wheel `22afa29f…4236d` (28 Python modules and three JSON
+resources). Evidence: `reports/scope-v1-installed/reports/installed-bytes.json`.
+This is the independently frozen input snapshot; subsequent CI profile-selector
+and test refinements passed 109 focused checks separately. New negative release
+gate cases cover S08/S09 scope, cumulative evidence and changed plan inputs;
+they do not prove artifact/code evolution. The full goal now includes S08/S09,
+whose required implementation/acceptance modules remain missing and PLANNED.
+
 The preceding pin `1a84f6f6…70699` contained the compatible Provider fix and passed 281 installed Runtime
 Provider cases on Windows and 279 on Linux with two real Windows DPAPI cases
 skipped there; independent Seed Provider consumers passed 80 cases per platform.

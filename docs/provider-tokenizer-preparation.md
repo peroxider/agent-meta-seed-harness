@@ -63,6 +63,15 @@ including Chinese, combining characters, emoji, structured JSON and special
 tokens. `test_provider_tokenizer_preparation.py` separately proves hash/size
 substitution and fallback refusal without requiring the optional engine.
 
+The current preparation CLI is separately frozen and installed under
+`reports/provider-tokenizer-native-v2`. Its `reports/verification.json` verifies
+both distributions' installed files, 17 optional wheels/608 installed files,
+seven native vectors, five invalid texts, two unsupported versions and three
+actual CLI refusals: existing output, altered vectors and missing engine.
+The default full consumer does not install the optional tokenizer engine.
+These remain local text-encoding checks with no Provider request or Host
+admission claim.
+
 The public diagnostic prompt encodes to five text tokens. Rendering that one
 sample using the pinned author's default template produces 17 input tokens,
 matching the existing gateway diagnostic's reported 17. This is one sample,
