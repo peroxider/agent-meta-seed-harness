@@ -1,0 +1,320 @@
+# Public Host integration status
+
+Status: IN_PROGRESS. RP-00–RP-02 remain OPEN.
+
+The lifecycle suite now also returns to an installed old package through a
+freshly signed activation, with a new Composition and new grant generation.
+It rejects a stale signed plan, discards the actual committed activation
+response at the public transport edge, restarts the real owner, and compares
+the byte-identical replayed response twice. Previously confirmed Task records
+remain unchanged, new Tasks execute the old version again, and an uninstalled
+version cannot be reactivated. Both trusted_in_process and actual InMemory
+profiles are exercised. This is stateless Harness lifecycle rollback; it does
+not certify generic Composition rollback or RESTORE_PARENT State restoration.
+
+The explicit Runtime development wheel exposes Public API 1.6 and Harness
+Contract 1.1.0. ADR 037 adds a development bound trusted in-process Host;
+there is no released Host compatibility claim yet. Exact wheel and contract
+hashes live in `docs/ci-inputs.json` and `docs/runtime-contract/manifest.json`.
+
+## Control plane available for consumer verification
+
+On Windows the following commands use native Named Pipes, OS peer identity,
+CurrentUser DPAPI and protected credential DACLs:
+
+```console
+agent-meta --data-dir C:\runtime-data --output json init
+agent-meta --data-dir C:\runtime-data --output json start
+agent-meta --data-dir C:\runtime-data --output json info
+agent-meta --data-dir C:\runtime-data --output json stop
+```
+
+`start` runs in the foreground; use another shell for `info`/`stop`. An empty
+bootstrap reports core-ready and serving-not-ready. `connect(data_dir)` opens
+the public SDK's local transport. `client.server_instance_id` comes from the
+authenticated Hello exchange. Administrative commands are signed by the public
+CLI through Runtime's credential adapter; Seed never reads a key/DB/CAS path.
+Adapter execution must never inherit operator Root authority.
+
+`tests/contract/test_daemon_transport.py` invokes the published console entry
+point under the installed wheel's isolated interpreter, from an unrelated
+working directory. It checks real SDK discovery, signed stop, exclusive owner,
+abrupt death/restart and fresh incarnation identity. This is control-plane
+consumer evidence only. No readiness boolean or Task state is advanced by a
+test fixture. Non-Windows runs explicitly select INSECURE_TEST_ONLY storage and
+cannot establish a product security profile.
+
+The offline test guard permits only the standard library's scoped socketpair
+creation needed by Windows asyncio. Ordinary loopback and Internet connect /
+connect_ex remain blocked; this does not change the Named Pipe transport.
+
+## Development execution path
+
+The signed AMPAK entrypoint is `agent_meta_seed_harness.host_binding:create`,
+a synchronous zero-argument factory returning the public HarnessAdapter.
+Health receives no fabricated Task. Seed's Loop, Context, explicit fake Provider
+and echo use only the published facade. Runtime commits all durable records.
+The entrypoint binds `loop.py`, `context.py`, `providers/fake.py` and
+`capabilities/echo.py`. The Loop validates the signed policy and bounds its
+model turns by both that policy and the accepted Task budget. Runtime still
+authorizes and reserves every call independently. Package CLI and consumer
+fixtures share one explicit execution-source allowlist.
+
+`tests/acceptance/test_host_bootstrap.py` runs from installed wheels against a
+separate real daemon process and the independently built Seed AMPAK. It verifies
+actual health/readiness, full multipart results, serial echo/two-tool dispatch,
+free-text non-dispatch, LENGTH, process-kill UNKNOWN recovery, restart execution,
+deactivation and uninstall. Public causal queries check invocation counts;
+terminal ArtifactIds match exact normalized expected bytes. No Runtime private
+implementation, readiness fixture or storage inspection participates.
+
+The package contract suite also exercises public validation negatives and
+Validate/Install non-execution from the named S01 test module. ADR 038's source
+audit is an API-boundary check, not Python isolation. Runtime-owned upgrade
+tests prove old-serving continuity and restart after a failed candidate;
+independent successful-upgrade/drain proofs are described below; rollback and
+the remaining lifecycle fault matrix are still required.
+
+The current profile requires an explicitly trusted publisher, supports only
+zero-cost model results/PURE tools and uses `utf8-bytes/v1` for Context. It does
+not establish process isolation, controlled Provider egress, public State reads
+or the complete fault matrix. The package contains an
+explicit `fake` Provider, with `terminal`, `echo`, `two_echo`, `free_text`,
+`length` and cooperative `wait` workloads; it never silently selects a live model.
+
+## Execution gates still required
+
+Finish the S01A/S02 schema/authority/budget/cancellation/known-result/effect fault
+matrix, independent upgrade/drain/rollback cases, all Context provenance/redaction/ladder
+requirements and independent AC-M17/AC-M48/NFR-M48 proofs. Then publish the Host
+contract version and evaluate RP-00–RP-02. The full S04–S07 Provider/tool/State/
+Scratch/session/Evolution scope remains scheduled; no dependency is VERIFIED.
+
+## Frozen Context development profile
+
+ADR 039 provides generic Context mechanisms through the public `sdk.context` API.
+Seed selects its own input schema, echo operation, explicit fake Provider profile,
+16,384-byte budget and reject-on-overflow policy. These are content-addressed
+resources referenced by AMPAK runtime constraints, without changing the frozen
+Harness manifest fields. Host freezes authorized sources at Task acceptance and
+independently recomputes all submitted sections/provenance/counts. The five-section
+20/30/20/15/15 ladder carries unused quota forward and counts delimiters. The
+fake Provider reads the redacted projected input; a daemon test compares a bearer
+secret workload with the exact expected redacted terminal ArtifactId. State
+contents and arbitrary live Fact queries are not exposed by this snapshot.
+
+Runtime-owned tests cover full-schema overflow, Unicode truncation, normalization,
+redaction before Fact selection, exact resource identities and 100 stable replays.
+`tests/contract/test_context_projection.py` also installs a separately signed
+consumer probe package in a real daemon. Six forged requests fail with
+INVALID_RESULT before any Invocation, and 100 Context requests over one frozen
+Task retain exactly the same projection identity/provenance/rendered bytes and
+then complete through the actual fake Provider. This caught and fixed replay
+invalidation of an earlier Host-issued projection object. Public causal queries
+confirm zero calls for forgeries and exactly one model call for the replay case.
+
+The complete Context/AC-M48/NFR-M48 matrix remains required; these development
+changes do not promote a dependency or advertise Host SPI 1.0.0.
+
+## Loop and tool conformance preparation
+
+The named `test_loop_semantics.py` and `test_tool_dispatch.py` modules install
+independently signed Seed packages with a scripted consumer Provider and PURE
+echo adapter. They execute through the same real Host as the default fake
+Provider, without Runtime state mutation or test readiness. Cases cover complete
+terminal parts, LENGTH, textual non-dispatch, invalid/empty responses, unknown
+cost, policy/Task ceilings, serial 16-call dispatch, 17-call rejection, global
+call IDs, complete assistant/tool history, schema failures and explicit
+stop/continue-on-error behavior. Causal queries check actual invocation counts;
+terminal ArtifactIds match independently encoded expected results. These are
+development proofs; the remaining fault, deadline/authority, release and
+platform matrix still applies.
+
+## Public execution inspection and process-loss proofs
+
+Public API 1.2 adds `client.get_task_execution(task_id)` and CLI
+`agent-meta task execution <task-id>`. Its schema-version-one resource contains
+bounded Invocation states/normalized usage/artifact references, projection
+manifests and accepted/consumed budgets. It exposes neither storage paths nor
+Provider-native objects or raw contents. It is an authenticated local operator
+read, separate from the Harness facade. Older negotiated minors refuse it.
+
+`test_host_recovery.py` kills a real owner with a model result either confirmed
+or still RUNNING. `test_loop_recovery.py` does the same at a PURE tool boundary
+after a model result. The consumer's own Provider/tool callbacks emit nonsecret
+observation markers to the daemon's captured console; tests read that public
+process output and public execution metadata, never Runtime DB/CAS/key paths.
+Random model content, preserved Invocation/output/projection IDs and unchanged
+consumed counts establish confirmed replay. UNKNOWN stops without another
+callback. Confirmed tool history is reconstructed in order before the next
+model call. These cases do not establish irreversible effects, hard isolation,
+the entire cancellation/fault matrix or a release compatibility declaration.
+
+## Upgrade and uninstall ownership
+
+`test_release_lifecycle.py` builds new package versions with explicit descriptor
+revisions, verifies real cutover, drains a confirmed old Task with its frozen
+Composition/Surface, and uninstalls the old installation while the new version
+continues serving. An unhealthy next candidate leaves the healthy serving
+version usable. A separate case checks that cutover's immediate scoped-grant
+revocation denies the old Task's next tool call; it cannot use a new installation
+grant or bootstrap Root authority. Confirmed work can drain without obtaining
+another effect authorization.
+
+Runtime ADR 041 checks uninstall references by installation ownership, including
+State owners and unsettled Effects. Unrelated serving work no longer blocks
+removing a drained old package. The builder accepts explicit descriptor revision
+and validated loop policy; the package CLI exposes `--descriptor-revision`.
+Independent rollback, wider crash/authority cases and release evidence remain
+required. The full S04–S07 scope remains unverified.
+
+## Independent Host contract matrix
+
+The named `test_host_contract.py` module installs a separately signed consumer
+adapter. Actual task-free health probes and immutable Task/View/Surface/Context
+values are checked inside that adapter. Public execution inspection confirms
+that unissued/cloned/foreign-Task projections, calls before a model, out-of-order
+or altered/repeated tool calls, pending-tool model calls and forged/early terminal
+results cannot create additional invocations or a terminal Artifact. Restricted
+activation policies separately exhaust model and tool grants while the operator
+still has Root authority; the Host refuses another call and does not debit a
+denied invocation. This matrix remains development evidence until the remaining
+epoch/fault and release gates are complete; the principal and deadline cases
+described below add bounded development coverage.
+
+## Ordinary content inspection
+
+Public API 1.3 adds `client.get_artifact_content(artifact_id) -> bytes` and CLI
+`artifact content <id>`. Only ordinary content up to 1 MiB is supported. The
+service and SDK independently verify size/hash; encrypted or tombstoned
+classifications are refused without trying a plaintext copy. This is operator
+inspection, not a new execution facade or restricted-read permission.
+
+`test_artifact_content.py` uses installed wheels, public upload/read/verify and
+the real daemon to compare binary/empty/boundary bytes, explicit limits and
+unchanged observation revisions. The Context test now reads the actual
+ProjectionManifest, section outputs and concatenated rendering through this API
+and checks exact hashes and token counts. Bootstrap compares actual terminal
+bytes with independently encoded expected multipart results. No test reads
+Runtime storage paths. RP-04 stays OPEN for controlled Host tools, State and
+Scratch; these ordinary reads do not establish raw retention/decryption.
+
+## Strict admission, timeout and cancellation
+
+ADR 043 makes SDK/CLI/server share strict Task budget/deadline validation.
+Budgets cannot silently cast booleans/fractions/strings or discard falsy input;
+the CLI rejects malformed/duplicate JSON fields. `task submit --deadline-at-us`
+exposes the existing absolute microsecond field. Zero remains an expired
+deadline, and dry-run validates the same payload without staging snapshots.
+
+The named Host matrix now checks literal expired deadlines with no model or
+projection, timeout during an actual waiting model callback, cancellation of
+in-flight and already-confirmed results, and unchanged consumed counters.
+A separate later cancel command receives FAILED_PRECONDITION after terminal;
+the result and invocation records remain unchanged. This is distinct from
+replaying the same complete signed command, whose full matrix remains RP-05.
+The cooperative profile still does not establish hard preemption/isolation.
+
+## Ordinary actor keys and attenuated authority
+
+ADR 044 adds Public API 1.4's `Authority.CreatePrincipal/Delegate/Revoke` and
+matching SDK methods/CLI commands. A consumer generates and retains its own
+Ed25519 key, registers only the public bytes through operator administration,
+then connects with `CommandAuthority(actor_id, grant_id, key.sign)`. Ordinary
+AGENT/CAPABILITY/PEER identities cannot create a second Root or Runtime Service.
+Delegation uses the exact signed parent, strictly contains permissions/scope/
+time/epoch/uses/depth, and consumes one command use. Amount ceilings are rejected
+as unavailable until amount accounting is implemented.
+
+`test_actor_authority.py` exercises the installed wheel and actual daemon with
+these consumer-owned keys. Missing, wrong-scope, exhausted and expired model
+authority cannot borrow the operator or Harness Service's permissions. The
+frozen Surface excludes unauthorized tools; Seed's selected echo schema then
+causes Context to refuse before model dispatch. A fully scoped actor completes
+the model/tool/model chain. Separate scheduling windows revoke model/tool
+authority after projection or a confirmed model result: the next call is denied,
+with unchanged prior Invocation/projection IDs and consumed counts and no denied
+callback. Public delegation with one remaining use succeeds once, replays the
+same receipt and refuses another command. Process output and public metadata
+provide observations; consumer tests never open Runtime DB/CAS/key paths.
+
+These cases extend SH-HOST-01. They do not close RP-01/RP-05/RP-07, publish
+Host SPI 1.0 support, establish Epoch succession or replace release evidence.
+
+## Cooperative Host scheduling
+
+A full consumer run exposed a Hello deadline while one Task issued 100
+immediate Context requests. ADR 045 adds a scheduling point outside all store
+transactions at each async Host call boundary, then rechecks cancellation and
+authority. This lets ready management I/O and cancellation run between calls;
+it does not preempt a callback that blocks without awaiting. Scheduler-port
+regressions and the real Context/Host matrix verify this bounded correction.
+
+## Public Task state traces and determinism
+
+ADR 046 adds API 1.5's bounded, read-only `get_task_trace(task_id)` / CLI
+`task trace`. One SQLite snapshot returns actual Action status, ordered Fact
+metadata and Task-scoped causal edges. It never infers missing transitions or
+returns raw Fact payloads. This supports external sequence comparisons; it is
+not the complete general Fact/Evidence/Evaluation query contract.
+
+The named `test_nfr_m48.py` drives 100 distinct real Tasks using the default
+Seed Loop/fake Provider/echo, a consumer-owned signing key, one declared input
+and budget, and no runtime.reflect grant. Exact frozen Context source/content
+hashes, Surface, state bindings, rendered sections, actual normalized requests,
+model/tool output hashes, statuses/reasons and causal edges are compared.
+Generated identities/times/absolute observation revisions are normalized only
+at explicit paths documented in `tests/nfr_runtime.py`; derivative projection
+request hashes are verified before normalization. Fact access is explicitly
+unavailable/empty in this fixture, rather than substituting live changing Facts
+for the same snapshot. This is a development proof in the current trusted
+profile; AC-M17's InMemory Backend and complete release gates remain separate.
+
+`tests/acceptance/test_ac_m48.py` runs ten response/budget cases twice each on
+the real Host: text, multipart content, LENGTH, one/two tools, duplicate call ID,
+empty response, error finish, exhausted budget and tool/shell-shaped free text.
+It independently encodes expected terminal bytes, compares normalized actual
+Action/Invocation/Fact graphs and observes consumer model/tool callback markers.
+Text cases produce exactly one model callback and no tool callback/invocation;
+they do not provide an isolation or InMemory Backend support claim.
+
+## InMemory enforcement preparation
+
+Runtime ADR 047 validates the specified Root-signed public Service certificate
+and Service-signed JCS token, strict scope/time/ceiling binding and a bounded
+thread-safe replay cache. ADR 049 registers the actual certificate in fresh
+bootstrap, retains it through the initialization Fact and provides a signer
+that opens only the protected Service key. It does not grant effect authority;
+Actor and installation-scoped Service checks are still independently required.
+
+ADR 048 repairs the existing InMemory adapter's negotiated-session/handle
+checks, immutable request semantics, actual result Artifact, mandatory hash
+acknowledgement, retention capacity and UNKNOWN cancellation behavior. Instances
+without an injected execution verifier are explicitly contract-test-only. These
+Runtime proofs alone do not replace AC-M17.
+
+ADR 050 attaches an explicitly selected `in_memory` Host through actual
+negotiate/submit/handle/await. Select it with `start --execution-backend in_memory`
+or `execution.host_backend = "in_memory"` in TOML; the CLI option overrides
+configuration and the frozen profile hash records the selection. Trust/session
+failure refuses the selected path without fallback. Native package callbacks
+are normalized inside Backend activity. The existing Actor + installation
+Service checks and budget reservations still precede it.
+
+Invocation confirmation, its actual Artifact and a terminal-ack outbox intent
+commit atomically. Ack delivery occurs outside Meta transactions and retries
+the exact result hash. A lost ephemeral session is recorded as
+`UNAVAILABLE_SESSION_LOST`; no successful ack or durable Backend restoration is
+invented. Confirmed results remain authoritative in Meta Store, and incomplete
+results after owner loss remain UNKNOWN. Public API 1.6's optional
+`execution_binding` exposes public audit IDs, handle hash, terminal hash and ack
+state, without opaque handles/session secrets/token bytes. Current
+`get_view(include_backend=True)` exposes the selected profile hash and features.
+
+The named `tests/acceptance/test_ac_m17.py` installs Seed's own package and uses
+an own-key Actor for context → fake model → echo → execution Facts → public why
+→ completion. It verifies actual binding and ack metadata through public APIs.
+The model/tool process-kill recovery suites also select this Backend and
+independently observe callback counts. This is Windows development evidence;
+the profile remains trusted Python, cooperative, zero-cost/PURE with EMULATED
+persistence and no process/network/credential/hard-quota isolation claim.
