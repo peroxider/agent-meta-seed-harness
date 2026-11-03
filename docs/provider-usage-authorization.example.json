@@ -1,0 +1,16 @@
+{
+  "schema": "seed-provider-usage-authorization/v1",
+  "source": "EXAMPLE_REQUIRES_LOCAL_OPERATOR_AUTHORIZATION",
+  "selected_profile": "volcano-operator-config",
+  "selected_model": "glm-5.3-flash",
+  "allowed_usage": "EXISTING_SUBSCRIPTION_OR_FREE_QUOTA_ONLY",
+  "incremental_cost_ceiling_micros": 0,
+  "paid_fallback_allowed": false,
+  "billing_boundary_status": "UNVERIFIED",
+  "subscription_only_gateway_independently_verified": false,
+  "subscription_only_gateway_operator_attested": false,
+  "live_requests_authorized": false,
+  "stop_on_rate_limit": true,
+  "live_requests_performed": 0,
+  "credential_material_recorded": false
+}
