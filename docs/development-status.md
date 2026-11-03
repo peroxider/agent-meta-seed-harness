@@ -35,7 +35,9 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   frozen Task retain identical identity, provenance and rendered content.
 - Loop/tool tests cover complete normalized terminal arrays, LENGTH, free-text
   non-dispatch, ordered history, schemas, policy/Task limits, 16/17 tool calls,
-  global call IDs and stop/continue-on-error behavior. The default loop's Task
+  global call IDs and stop/continue-on-error behavior, where a continued
+  declared tool error still cannot bypass the next tool's authority check under
+  an exhausted grant. The default loop's Task
   fact trace registers exactly the content-addressed projection manifest and no
   raw provider response artifact, and every inspected MODEL invocation output is
   normalized multipart bytes; the frozen loop policy schema rejects a

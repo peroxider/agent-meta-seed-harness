@@ -5,11 +5,12 @@ import asyncio
 import pytest
 
 from agent_meta_runtime.sdk.host import JsonPart, TerminalResult, TextPart, encode_terminal_result
-from agent_meta_runtime.sdk.packages import sha256_hex
+from agent_meta_runtime.sdk.packages import canonical_json, sha256_hex
 
+from recovery_runtime import terminal_execution
 from loop_runtime import loop_runtime, run_workload, scripted_bundle
-from seed_package import install_seed, wait_ready
-from seed_runtime import running_daemon
+from seed_package import install_seed, limit_activation_grant, wait_ready
+from seed_runtime import admin, running_daemon
 
 
 @pytest.mark.parametrize("scenario,count", [("two_tools", 2), ("tool_16", 16)])
@@ -51,3 +52,23 @@ def test_inmemory_schema_failure_stops_even_when_declared_tool_errors_can_contin
         result, invocations, _ = run_workload((data_dir, tmp_path), "malformed_tool_result")
         assert result["status"] == "FAILED" and result["error"] == "INVALID_RESULT", result
         assert len(invocations) == 2
+
+
+@pytest.mark.parametrize("execution_backend", ["trusted_in_process", "in_memory"])
+def test_continued_tool_error_still_enforces_next_tool_authority(tmp_path, execution_backend):
+    policy = {"schema": "harness-loop-policy/v1", "max_turns": 8, "max_steps": 40, "max_model_calls": 8, "stop_on_tool_error": False}
+    bundle, publisher = scripted_bundle(loop_policy=policy)
+    bundle = limit_activation_grant(bundle, permission="capability.invoke", max_uses=1)
+    with running_daemon(tmp_path, publishers=[publisher], execution_backend=execution_backend) as data_dir:
+        install_seed(data_dir, tmp_path, bundle)
+        asyncio.run(wait_ready(data_dir))
+        path = tmp_path / "tool-error.json"
+        path.write_bytes(canonical_json({"provider": "fake", "scenario": "tool_error", "value": "fixture"}))
+        reference = admin(data_dir, "artifact", "put", str(path), "--kind", "task_input")["artifact_id"]
+        task_id = admin(data_dir, "task", "submit", "--input-artifact", reference)["task_id"]
+        result, execution = asyncio.run(terminal_execution(data_dir, task_id))
+        assert result["status"] == "FAILED" and result["error"] == "AUTHORITY_DENIED", result
+        assert len(execution["invocations"]) == execution["consumed_budget"]["steps"] == 2
+        assert execution["consumed_budget"]["model_calls"] == 1
+        assert [item["kind"] for item in execution["invocations"]] == ["MODEL", "CAPABILITY"]
+        assert execution["invocations"][1]["status"] == "FAILED" and execution["invocations"][1]["error"] == "INVALID_RESULT"
