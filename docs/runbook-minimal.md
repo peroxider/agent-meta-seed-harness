@@ -137,12 +137,23 @@ before uninstalling the old package. Do not edit database refs to bypass pins.
 To return to a still-installed old stateless package, validate it and approve a
 fresh activation with current meta/serving guards. This creates a new immutable
 Composition revision and fresh scoped grants; it does not revive revoked old
-grants. Preserve the signed command bytes before submission. If the response is
-lost, replay those exact bytes through public `execute_command` after reconnect
-or restart rather than preparing another activation. The lifecycle suite proves
-the original response bytes and revision/grant IDs are returned without a
-second activation. This operation does not restore managed State or undo
-external effects; generic Composition/State rollback requires separate proof.
+grants, and frozen per-grant limits (such as `max_uses`) carry into the new
+generation exactly as signed. Preserve the signed command bytes before
+submission. If the response is lost, replay those exact bytes through public
+`execute_command` after reconnect or restart rather than preparing another
+activation: the lifecycle suite proves the original response bytes and
+revision/grant IDs are returned without a second activation. Idempotency
+belongs to the exact envelope bytes — a distinct re-approval of the same
+package mints another fresh grant generation. An UNINSTALLED identity is
+terminal: rollback activation and even reinstalling the same signed package
+are refused (`FAILED_PRECONDITION`, "history never revives"), the currently
+serving ACTIVE installation refuses uninstall, a same name/version package
+with a different hash is refused `IDEMPOTENCY_CONFLICT`, and a superseded
+activation envelope is refused `REVISION_CONFLICT`. A Task that is mid-flight
+under the outgoing version drains frozen under its own Composition across
+the cutover in either direction. This operation does not restore managed
+State or undo external effects; generic Composition/State rollback requires
+separate proof.
 
 ```console
 agent-meta --data-dir DATA --output json harness deactivate HARNESS_ID
@@ -151,9 +162,10 @@ agent-meta --data-dir DATA --output json stop
 ```
 
 Uninstall can legitimately be refused while references remain. Stop targets the
-authenticated daemon incarnation. The upgrade/drain/failure and process-loss
-consumer suites are runnable examples; rollback and the remaining full fault
-matrix are still pending, so this runbook makes no completed release claim.
+authenticated daemon incarnation. The upgrade/drain/failure, process-loss and
+named rollback fault-matrix consumer suites are runnable examples; the full
+remaining fault matrix and release evidence are still open, so this runbook
+makes no completed release claim.
 
 ## Release decision
 
