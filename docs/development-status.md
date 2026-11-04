@@ -214,7 +214,13 @@ against a real daemon.
   candidates fail-closed over the public Artifact store: live old value
   hash-binding with stale-hash refusal, kind whitelist, evaluator-independence
   and a deterministic canonical diff preview
-  (`tests/contract/test_evolution_artifact_governance.py`). World
+  (`tests/contract/test_evolution_artifact_governance.py`). The bounded
+  trigger policy (`evolution/tool_trigger.py`) aggregates failure modes from
+  real task history read through public bounded traces, never triggers on
+  empty history, enforces one Proposal per window with a per-target-path
+  cooldown that a fresh window cannot bypass, and refuses policies wider
+  than the frozen ceiling
+  (`tests/contract/test_evolution_artifact_policy.py`). World
   registration has no public interface on the pinned wheel (RP-06 OPEN), so the
   matrix is provable up to the World gate, and evidence-string validation at
   `Evolution.Propose` remains Seed-side collector work.

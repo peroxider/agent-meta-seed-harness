@@ -320,8 +320,8 @@ def test_evidence_path_escape_is_rejected(tmp_path, path):
 
 
 @pytest.mark.parametrize("profile,required,present,excluded", [
-    ("evolution-artifact", ("SH-EVO-03", "SH-EVO-04"), ("SH-GOV-03",), ("SH-EVO-05", "SH-GOV-04")),
-    ("evolution-code", ("SH-EVO-03", "SH-EVO-04", "SH-EVO-05", "SH-GOV-04"), ("SH-GOV-03",), ()),
+    ("evolution-artifact", ("SH-EVO-03",), ("SH-EVO-04", "SH-GOV-03"), ("SH-EVO-05", "SH-GOV-04")),
+    ("evolution-code", ("SH-EVO-03", "SH-EVO-05", "SH-GOV-04"), ("SH-EVO-04", "SH-GOV-03"), ()),
 ])
 def test_evolution_extension_profiles_require_their_missing_named_proofs(profile, required, present, excluded):
     root = Path(__file__).resolve().parents[2]

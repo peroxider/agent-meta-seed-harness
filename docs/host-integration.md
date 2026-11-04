@@ -451,4 +451,10 @@ refused before anything is built, a candidate may not replace its own frozen
 evaluator, and the approval preview is a deterministic canonical hash/path
 diff. The named partial SH-GOV-03 module
 `tests/contract/test_evolution_artifact_governance.py` pins these legs on a
-real daemon; the experiment/promotion legs stay gated (RP-06 OPEN).
+real daemon; the experiment/promotion legs stay gated (RP-06 OPEN). The
+bounded trigger policy (`evolution/tool_trigger.py`) aggregates failure
+modes from real task history through public bounded traces — empty history
+never triggers — and enforces one Proposal per window with a per-target-path
+cooldown that a fresh window cannot bypass and a frozen ceiling that refuses
+wider policies; `tests/contract/test_evolution_artifact_policy.py` pins
+these bounds over a real failing task.
