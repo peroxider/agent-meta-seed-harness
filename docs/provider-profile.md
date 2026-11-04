@@ -149,7 +149,13 @@ query. The lookup half of the matrix is therefore `UNSUPPORTED — not
 implemented`; no code path claims upstream lookup support it cannot exercise.
 
 The resulting boundary behavior is pinned by named public consumer proofs in
-`tests/contract/test_provider_recovery.py`:
+`tests/contract/test_provider_recovery.py` and
+`tests/contract/test_provider_retry_policy.py`:
+
+- Packaging fail-closure: a profile document whose `lookup_policy` is anything
+  but `UNAVAILABLE_NO_RETRY` is refused at `build_bundle` with `explicit
+  canonical Provider profile is required`, so no package can declare a
+  durable-lookup retry policy that the pinned wheel cannot exercise.
 
 - Ambiguous outcome (connection loss after send, owner death, Task deadline
   during an in-flight request, an explicit Task cancellation arriving while
@@ -163,9 +169,14 @@ The resulting boundary behavior is pinned by named public consumer proofs in
 - Provably-not-accepted outcome (pre-send failure: no listener, refused before
   any wire byte): the invocation settles `NOT_SENT` with zero liability and
   zero usage; nothing is resent on recovery, and a new explicitly submitted
-  Task fails identically while the endpoint is unreachable. Only this provable
-  non-admission boundary permits a policy-governed retry, and the current
-  profile's policy still requires an explicit new Task submission.
+  Task fails identically while the endpoint is unreachable. When the same
+  endpoint returns with the profile unchanged, the settled `NOT_SENT`
+  invocation replays unchanged (same identity, zero liability) and is still
+  never resent — exactly one new authorized wire request exists, and it
+  belongs to a new explicitly submitted Task that succeeds `CONFIRMED` with
+  real wire cost. Only this provable non-admission boundary permits a
+  policy-governed retry, and the current profile's policy still requires an
+  explicit new Task submission.
 
 The deadline-during-request case additionally proves a late upstream response
 cannot reverse the settled UNKNOWN outcome, the invocation identity or the

@@ -244,7 +244,13 @@ during an in-flight request settles `UNKNOWN` with the full reservation as
 liability; a late upstream response cannot reverse the outcome, the invocation
 identity or the replayed terminal; an explicit cancel arriving while the
 request is on the wire ends the Task `CANCELLED` with the same UNKNOWN
-settlement and replays its receipt after an owner restart). A containment proof scans every public
+settlement and replays its receipt after an owner restart). The named
+`test_provider_retry_policy.py` module closes the retry-policy half of the
+matrix: a profile declaring any other `lookup_policy` than
+`UNAVAILABLE_NO_RETRY` is refused when the package is built, and after a
+pre-send failure the returned endpoint serves only a new explicitly submitted
+Task (one authorized wire request, `CONFIRMED` settlement with real cost)
+while the settled `NOT_SENT` invocation replays unchanged and is never resent. A containment proof scans every public
 surface after a real model+tool run — including the public `doctor` report
 with zero findings — and finds no secret value or derived hash; the credential
 exists only as its opaque handle. The named SH-PROV-03 module
