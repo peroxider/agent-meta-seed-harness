@@ -409,3 +409,90 @@ def test_seed_upgrade_preserves_committed_session_and_continues(tmp_path):
 
         asyncio.run(run())
         assert len(model_events(owner)) == 2
+
+
+def test_unknown_outcome_is_recorded_and_never_redispatched_as_a_new_task(tmp_path):
+    """UNKNOWN不盲重试: a Task whose effect was lost mid-callback resolves to
+    FAILED_RECOVERY; the coordinator records that terminal from committed
+    State and never submits the UNKNOWN round as a new Task."""
+    import time
+
+    bundle, publisher = instrumented_bundle()
+    with daemon_process(tmp_path, publishers=[publisher], label="midflight") as first:
+        install_seed(first.data_dir, tmp_path, bundle)
+        asyncio.run(wait_ready(first.data_dir))
+        authority = create_actor(first.data_dir, permissions=PERMISSIONS)
+
+        async def submit_and_hang():
+            client = await connect(first.data_dir, authority=authority)
+            try:
+                session = await open_session(client, authority, SESSION_DOCUMENT)
+                await session.reserve("message-1", "canary", scenario="wait")
+                task_id = await session.submit_pending(SUBMIT_1)
+                return session, task_id
+            finally:
+                await client.aclose()
+
+        session, task_id = asyncio.run(submit_and_hang())
+        # Kill only once the effect is genuinely in flight: the outcome is
+        # UNKNOWN to every later incarnation.
+        deadline = time.monotonic() + 10
+        while len(model_events(first)) < 1:
+            assert time.monotonic() < deadline, "provider callback never started"
+            time.sleep(0.01)
+        kill(first.process)
+    with daemon_process(tmp_path, publishers=[publisher], label="after-unknown") as second:
+        asyncio.run(wait_ready(second.data_dir))
+
+        async def recover(previous):
+            client = await connect(second.data_dir, authority=authority)
+            try:
+                session = await reattach(client, authority, previous)
+                document = await session.observe_transcript()
+                assert document["pending"]["task_id"] == task_id
+                assert [entry["stage"] for entry in
+                        (await session.observe_journal())["entries"]] == ["SUBMIT"]
+                # The journaled submit bytes replay the durable receipt — the
+                # same Task identity, never a fresh dispatch.
+                envelope = await session.recover_pending_dispatch("message-1")
+                replayed = await client.execute_command(SUBMIT_METHOD, envelope)
+                assert replayed.resource["task_id"] == task_id
+                await session.complete_pending(WRITEBACK_1)
+                committed = await session.observe_transcript()
+                message = committed["messages"][0]
+                assert message["terminal_status"] == "FAILED_RECOVERY", committed
+                assert message["result_artifact_id"] is None
+                assert message["task_id"] == task_id
+                assert committed["pending"] is None
+                # The fresh incarnation resubmitted nothing and journal holds
+                # exactly the original round.
+                assert session.submitted == []
+                assert [entry["stage"] for entry in
+                        (await session.observe_journal())["entries"]] == [
+                    "SUBMIT", "WRITEBACK",
+                ]
+                execution = await client.get_task_execution(task_id)
+                assert execution["consumed_budget"]["model_calls"] == 1
+                # The session stays usable: the next message is a fresh round.
+                await session.reserve("message-2", "after unknown")
+                new_task = await session.submit_pending(
+                    "task://019a44d0-0000-7000-8000-000000000003"
+                )
+                assert new_task != task_id
+                await session.complete_pending(
+                    "task://019a44d0-0000-7000-8000-000000000004"
+                )
+                committed = await session.observe_transcript()
+                assert [item["message_id"] for item in committed["messages"]] == [
+                    "message-1", "message-2",
+                ]
+                assert [item["terminal_status"] for item in committed["messages"]] == [
+                    "FAILED_RECOVERY", "SUCCEEDED",
+                ]
+            finally:
+                await client.aclose()
+
+        asyncio.run(recover(session))
+        # Generation two made exactly one model call: the new message. The
+        # UNKNOWN round was never re-executed.
+        assert model_events(second) == ["model"]

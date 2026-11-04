@@ -74,7 +74,10 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   lost submit receipt, terminal before writeback, writeback response loss —
   and recovers from committed State only, replaying exact journaled bytes
   with one Task, one model call and one append per message; failed and
-  cancelled terminals are recorded without redispatch and a Seed upgrade
+  cancelled terminals are recorded without redispatch, an UNKNOWN
+  (`FAILED_RECOVERY`) outcome from an effect lost mid-callback is recorded
+  from committed State without resubmitting the round as a new Task, and a
+  Seed upgrade
   preserves both session States. The plan's minimal front-end and round
 diagnostics (`agent_meta_seed_harness/repl.py`) propose stable message
 identities, recover any pending round on attach before new admission and

@@ -185,7 +185,7 @@
       "evidence": null,
       "id": "SH-SESS-02",
       "profile": "session",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/acceptance/test_session_recovery.py"
       ]

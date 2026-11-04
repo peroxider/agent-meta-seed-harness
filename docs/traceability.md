@@ -53,8 +53,8 @@ Backend in Windows development; the complete release matrix remains open.
 | SH-PROV-03 | provider | PLANNED | `tests/acceptance/test_live_provider.py` |
 | SH-CAP-01 | tools | IN_PROGRESS | `tests/contract/test_capability_toolset.py` |
 | SH-CAP-02 | tools | IN_PROGRESS | `tests/acceptance/test_capability_toolset.py`, `tests/acceptance/test_scratch_tools.py`, `tests/acceptance/test_scratch_recovery.py`, `tests/acceptance/test_scratch_retirement.py`, `tests/acceptance/test_scratch_backup.py` |
-| SH-SESS-01 | session | IN_PROGRESS | Schema preparation in `tests/contract/test_session_documents.py` and `tests/contract/test_session_document_state.py`; required `tests/contract/test_session_consistency.py` remains open |
-| SH-SESS-02 | session | PLANNED | `tests/acceptance/test_session_recovery.py` |
+| SH-SESS-01 | session | IN_PROGRESS | Schema preparation in `tests/contract/test_session_documents.py` and `tests/contract/test_session_document_state.py`; `tests/contract/test_session_consistency.py` now covers the named consistency matrix (dedup/conflict, concurrency refusal, summary provenance, journal non-self-expiry, control fields out of Projection, State conflict with frozen serving) in development |
+| SH-SESS-02 | session | IN_PROGRESS | `tests/acceptance/test_session_recovery.py` kills the daemon at every named protocol boundary and recovers from committed State only; UNKNOWN (`FAILED_RECOVERY`) outcomes are recorded without redispatch and the session stays usable |
 | SH-EVO-01 | evolution | PLANNED | `tests/acceptance/test_evolution_pipeline.py` |
 | SH-EVO-02 | evolution | PLANNED | `tests/contract/test_evolution_policy.py` |
 | SH-GOV-01 | evolution | PLANNED | `tests/contract/test_evolution_governance.py` |
