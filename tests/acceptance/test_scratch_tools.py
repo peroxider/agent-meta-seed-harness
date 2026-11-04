@@ -236,3 +236,76 @@ def test_seed_inspection_refuses_expressions_and_unissued_handles(
                 await client.aclose()
 
         asyncio.run(run())
+
+
+def test_scratch_output_channels_mark_truncation_explicitly_and_keep_schema(tmp_path):
+    with tools_environment(tmp_path) as (owner, actor, _, _):
+
+        async def run():
+            client = await connect(owner.data_dir, authority=actor)
+            try:
+                small_source = await client.put_artifact(
+                    realm_id=REALM,
+                    actor_id=actor.actor_id,
+                    kind="seed_scratch_source",
+                    media_type="text/x-python",
+                    content=b'print("SEED_TRUNC_SMALL")\n',
+                )
+                large_source = await client.put_artifact(
+                    realm_id=REALM,
+                    actor_id=actor.actor_id,
+                    kind="seed_scratch_source",
+                    media_type="text/x-python",
+                    content=b'import sys\nsys.stdout.write("x"*(1024*1024+4096))\nprint("SEED_TRUNC_READY")\n',
+                )
+                session = prior(0, "session_id")
+
+                def cell(reference):
+                    return {
+                        "name": "seed.scratch.execute",
+                        "arguments": {
+                            "session_id": session,
+                            "source_artifact_id": reference["artifact_id"],
+                            "deadline_at_us": time.time_ns() // 1000 + 120000000,
+                        },
+                    }
+
+                task, terminal, execution = await submit_tools(
+                    client,
+                    actor,
+                    [
+                        {"name": "seed.scratch.create", "arguments": {}},
+                        cell(small_source),
+                        cell(large_source),
+                    ],
+                    scenario="sequence",
+                )
+                assert terminal["status"] == "SUCCEEDED", terminal
+                values = await published(client, execution)
+                small, large = values[1], values[2]
+                # One cell prints a small line; the next exceeds the channel
+                # cap, and only the oversized channel is explicitly marked.
+                assert small["schema"] == "scratch-execution-receipt/v1"
+                assert small["stdout_truncated"] is False
+                assert large["schema"] == "scratch-execution-receipt/v1"
+                assert large["stdout_truncated"] is True
+                assert large["stderr_truncated"] is False
+                assert large["display_truncated"] is False
+                stream = json.loads(
+                    await client.get_artifact_content(large["stdout_artifact_id"])
+                )
+                assert stream["schema"] == "scratch-stream/v1"
+                assert stream["channel"] == "stdout"
+                assert stream["session_id"] == small["session_id"] == large["session_id"]
+                # The staged channel stays inside the 1 MiB output ceiling
+                # while the receipt keeps its full documented shape.
+                assert len(stream["text"].encode("utf-8")) <= 1024 * 1024
+                assert stream["text"].startswith("x" * 1024)
+                small_stream = json.loads(
+                    await client.get_artifact_content(small["stdout_artifact_id"])
+                )
+                assert small_stream["text"] == "SEED_TRUNC_SMALL\n"
+            finally:
+                await client.aclose()
+
+        asyncio.run(run())

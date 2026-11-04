@@ -58,8 +58,11 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   oversized workload is refused at admission before any invocation;
   seed.transform refuses input-schema violations before dispatch and duplicate
   JSON fields as a declared INVALID_ARGUMENT; state writes stay CAS-guarded
-  with per-operation refusal codes, bounded artifact reads and redaction as
-  recorded below.
+  with per-operation refusal codes — including `seed.state.read` and
+  `seed.state.write` on a session-reserved `SESSION_TRANSCRIPT` State refused
+  `AUTHORITY_DENIED` with the guarded CAS unchanged — plus bounded artifact
+  reads, explicit per-channel Scratch truncation marking inside the 1 MiB
+  ceiling, and redaction as recorded below.
 - A consumer-side session coordinator (`agent_meta_seed_harness/session_coordinator.py`)
   now drives the S06 message protocol over public State CAS and exact signed commands
   against a real daemon: identical retries recover the original operation, a

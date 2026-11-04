@@ -37,7 +37,7 @@ def test_signed_tools_package_has_exact_source_closure_and_scoped_declarations()
         for request in requests if request['permission'].startswith('scratch.'))
 
 
-@pytest.mark.parametrize('mode', ['unknown','schema','cas','budget','protected','source_kind','actor_deny','free_text'])
+@pytest.mark.parametrize('mode', ['unknown','schema','cas','budget','protected','protected_write','source_kind','actor_deny','free_text'])
 def test_tools_refuse_undeclared_invalid_conflicting_or_unscoped_effects(tmp_path, mode):
     with tools_environment(tmp_path) as (owner, actor, state, replacement):
         data = owner.data_dir
@@ -59,6 +59,12 @@ def test_tools_refuse_undeclared_invalid_conflicting_or_unscoped_effects(tmp_pat
                         owner_id='capability://seed.state', schema_id=state['schema_id'],
                         content_artifact_id=state['content_artifact_id'], purpose='SESSION_TRANSCRIPT')).resource
                     name, arguments = 'seed.state.read', {'state_id':protected['state_id']}
+                elif mode == 'protected_write':
+                    protected = (await client.create_state(realm_id=REALM, actor_id=actor.actor_id,
+                        owner_id='capability://seed.state', schema_id=state['schema_id'],
+                        content_artifact_id=state['content_artifact_id'], purpose='SESSION_TRANSCRIPT')).resource
+                    arguments = {'state_id':protected['state_id'],
+                        'expected_state_revision_id':protected['state_revision_id'], 'content_artifact_id':replacement}
                 elif mode == 'source_kind':
                     foreign = await upload(client, actor, {'value':'forbidden kind'}, 'note')
                     name, arguments = 'seed.artifact.read', {'artifact_id':foreign}
@@ -68,9 +74,13 @@ def test_tools_refuse_undeclared_invalid_conflicting_or_unscoped_effects(tmp_pat
                     assert terminal['status'] == 'SUCCEEDED' and len(execution['invocations']) == 1
                 else:
                     assert terminal['error'] == {'unknown':'AUTHORITY_DENIED','schema':'INVALID_RESULT',
-                        'cas':'REVISION_CONFLICT','budget':'RESOURCE_EXHAUSTED','protected':'AUTHORITY_DENIED','source_kind':'AUTHORITY_DENIED','actor_deny':'AUTHORITY_DENIED'}[mode], terminal
+                        'cas':'REVISION_CONFLICT','budget':'RESOURCE_EXHAUSTED','protected':'AUTHORITY_DENIED',
+                        'protected_write':'AUTHORITY_DENIED','source_kind':'AUTHORITY_DENIED','actor_deny':'AUTHORITY_DENIED'}[mode], terminal
                 current = await client.get_state(realm_id=REALM, actor_id=actor.actor_id, state_id=state['state_id'])
                 assert current['cas_revision'] == 1 and current['state_revision_id'] == state['state_revision_id']
+                if mode in ('protected', 'protected_write'):
+                    guarded = await client.get_state(realm_id=REALM, actor_id=actor.actor_id, state_id=protected['state_id'])
+                    assert guarded['cas_revision'] == 1 and guarded['state_revision_id'] == protected['state_revision_id']
             finally:
                 await task_client.aclose()
                 await client.aclose()

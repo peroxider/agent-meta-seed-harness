@@ -28,12 +28,19 @@ exact signed command after restart. This covers post-commit response loss;
 in-commit crashes and expired uncommitted commands need separate proofs.
 Independent native consumer fixtures exercise serial typed calls, Artifact
 publication/read, frozen State reads, own committed overlays, CAS conflicts,
-Actor/Service denial, protected transcript denial, normalization/redaction,
+Actor/Service denial, protected transcript denial (both `seed.state.read` and
+`seed.state.write` on a `SESSION_TRANSCRIPT` State are refused
+`AUTHORITY_DENIED` with the guarded CAS unchanged), normalization/redaction,
 invalid normalizer rollback, inert free text and budget refusal. A confirmed
 State resource tool is followed by an actual owned daemon kill; recovery must
 reuse its Invocation/output and leave the State CAS at two. A controlled TEST
 loopback Messages Provider dispatches `seed.artifact.put` and receives the
-public receipt in its next request. This is synthetic evidence with no live
+public receipt in its next request. Scratch receipts mark oversized output
+channels explicitly (`stdout_truncated` with `stderr_truncated`/
+`display_truncated` untouched on the same cell), the staged stream Artifact
+stays inside the 1 MiB channel ceiling with the small sibling cell untruncated,
+and both execution receipts keep their full `scratch-execution-receipt/v1`
+shape. This is synthetic evidence with no live
 gateway calls, real pricing or captured upstream R2 claim.
 
 The offline tools Provider also bounds normalized history to 4 MiB before
