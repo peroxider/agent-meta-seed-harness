@@ -56,6 +56,14 @@ Backend in Windows development; the complete release matrix remains open.
 | SH-SESS-01 | session | IN_PROGRESS | Schema preparation in `tests/contract/test_session_documents.py` and `tests/contract/test_session_document_state.py`; `tests/contract/test_session_consistency.py` now covers the named consistency matrix (dedup/conflict, concurrency refusal, summary provenance, journal non-self-expiry, control fields out of Projection, State conflict with frozen serving) in development |
 | SH-SESS-02 | session | IN_PROGRESS | `tests/acceptance/test_session_recovery.py` kills the daemon at every named protocol boundary and recovers from committed State only; UNKNOWN (`FAILED_RECOVERY`) outcomes are recorded without redispatch and the session stays usable |
 | SH-EVO-01 | evolution | PLANNED | `tests/acceptance/test_evolution_pipeline.py` |
+
+Supplemental `tests/contract/test_session_repl.py` exercises the plan's step 4/5
+REPL front-end against a real daemon without changing the frozen proof paths:
+pending rounds recover on attach before new admission, a dispatched-but-uncommitted
+round explains its reserved submit identity and journal entry, the lineage query
+moves the same message identity from pending to committed records, and an
+admission-refused round is durably committed with its FAILED terminal, zero
+invocations and a usable session afterwards.
 | SH-EVO-02 | evolution | PLANNED | `tests/contract/test_evolution_policy.py` |
 | SH-GOV-01 | evolution | PLANNED | `tests/contract/test_evolution_governance.py` |
 | SH-GOV-02 | evolution | PLANNED | `tests/acceptance/test_evolution_release.py` |

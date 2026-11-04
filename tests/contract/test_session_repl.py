@@ -7,6 +7,7 @@ explains any round's lineage from transcript, journal and public Task traces.
 
 import asyncio
 import json
+import time
 from pathlib import Path
 
 import pytest
@@ -66,6 +67,16 @@ def instrumented_bundle(**options):
 
 def model_events(owner):
     return [event["seed_probe_call"] for event in probe_events(owner)]
+
+
+def wait_model_events(owner, count):
+    """The daemon writes probe lines to a redirected file; allow it to land."""
+    deadline = time.monotonic() + 10
+    events = model_events(owner)
+    while len(events) < count and time.monotonic() < deadline:
+        time.sleep(0.05)
+        events = model_events(owner)
+    return events
 
 
 def test_next_message_id_is_stable_and_collision_free():
@@ -257,3 +268,103 @@ def test_repl_attaches_and_recovers_pending_before_new_input(tmp_path):
 
         asyncio.run(recover_and_continue(previous))
         assert model_events(second) == ["model", "model"]
+
+
+def test_repl_explains_a_pending_round_before_completing_it(session_environment):
+    owner, authority = session_environment
+
+    async def scenario():
+        client = await connect(owner.data_dir, authority=authority)
+        try:
+            session = await open_session(client, authority, SESSION_DOCUMENT)
+            repl = SessionRepl(session)
+            assert await repl.attach() is None
+            # A dispatched round without its observed terminal is pending;
+            # its reserved submit identity stays explainable from records.
+            await session.reserve("message-1", "canary")
+            task_id = await session.submit_pending()
+            submit_id = session.submitted[0]
+            assert await repl.handle_line("/history") == ["message-1 PENDING"]
+            explanation = await repl.explain("message-1")
+            assert explanation["state"] == "pending"
+            assert explanation["task_id"] == task_id
+            assert explanation["submit_command_id"] == submit_id
+            assert explanation["writeback_command_id"] is None
+            assert [entry["stage"] for entry in explanation["journal"]] == ["SUBMIT"]
+            assert explanation["journal"][0]["command_id"] == submit_id
+            assert len(explanation["journal"][0]["command_sha256"]) == 64
+            rendered = render_explanation(explanation)
+            assert rendered[0] == (
+                "message-1 [pending] task=" + task_id
+                + " input=" + explanation["input_artifact_id"]
+            )
+            assert any(
+                f"submit={submit_id} writeback=None" in line for line in rendered
+            )
+            assert await repl.handle_line("/explain message-1") == rendered
+            # Completing the externally driven round moves the same identity
+            # into the committed branch of the same lineage query.
+            await session.complete_pending()
+            committed = await repl.explain("message-1")
+            assert committed["state"] == "committed"
+            assert committed["task_id"] == task_id
+            assert committed["terminal_status"] == "SUCCEEDED"
+            assert [entry["stage"] for entry in committed["journal"]] == [
+                "SUBMIT", "WRITEBACK",
+            ]
+            # New admission works once the pending round is complete.
+            assert await repl.handle_line("second") == ["committed message-2"]
+            history = await repl.handle_line("/history")
+            assert history[0] == "message-1 SUCCEEDED task=" + task_id
+            assert history[1].startswith("message-2 SUCCEEDED task=")
+        finally:
+            await client.aclose()
+
+    asyncio.run(scenario())
+    assert wait_model_events(owner, 2) == ["model", "model"]
+
+
+def test_repl_commits_a_failed_round_and_records_its_terminal(session_environment):
+    owner, authority = session_environment
+
+    async def scenario():
+        client = await connect(owner.data_dir, authority=authority)
+        try:
+            session = await open_session(client, authority, SESSION_DOCUMENT)
+            repl = SessionRepl(session)
+            assert await repl.attach() is None
+            # The over-bound value is refused at Task admission; the round is
+            # still durably committed with its FAILED terminal, not retried.
+            assert await repl.handle_line("x" * 4097) == ["committed message-1"]
+            committed = await session.observe_transcript()
+            assert committed["pending"] is None
+            assert committed["messages"][0]["terminal_status"] == "FAILED"
+            assert committed["messages"][0]["result_artifact_id"] is None
+            execution = await client.get_task_execution(
+                committed["messages"][0]["task_id"]
+            )
+            assert execution["invocations"] == []
+            assert execution["error"] == "INVALID_ARGUMENT"
+            explanation = await repl.explain("message-1")
+            assert explanation["state"] == "committed"
+            assert explanation["terminal_status"] == "FAILED"
+            assert explanation["result_artifact_id"] is None
+            assert "composition_id" in explanation
+            rendered = await repl.handle_line("/explain message-1")
+            assert any("terminal=FAILED" in line for line in rendered)
+            assert (await repl.handle_line("/history"))[0].startswith(
+                "message-1 FAILED task="
+            )
+            # The same session stays usable for a healthy round afterwards.
+            assert await repl.handle_line("fine") == ["committed message-2"]
+            final = await session.observe_transcript()
+            assert [item["terminal_status"] for item in final["messages"]] == [
+                "FAILED", "SUCCEEDED",
+            ]
+        finally:
+            await client.aclose()
+
+    asyncio.run(scenario())
+    # Only the healthy round reaches the Provider; the admission-refused one
+    # never invoked the model.
+    assert wait_model_events(owner, 1) == ["model"]

@@ -82,7 +82,10 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
 diagnostics (`agent_meta_seed_harness/repl.py`) propose stable message
 identities, recover any pending round on attach before new admission and
 explain a round's lineage from transcript, journal and public Task trace;
-`tests/contract/test_session_repl.py` proves both against a real daemon.
+`tests/contract/test_session_repl.py` proves recovery, pending and committed
+round lineage (a dispatched-but-uncommitted round explains its reserved submit
+identity) and admission-refused rounds committed with their FAILED terminal
+against a real daemon.
 - Public inspection returns bounded Task/Invocation/projection metadata and
   ordinary Artifact content with independent size/hash verification. It does
   not expose Restricted content or native objects. Literal zero deadlines and

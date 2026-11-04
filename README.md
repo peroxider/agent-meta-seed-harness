@@ -45,6 +45,13 @@ profile 证据门禁后，只为已测试的同一批制品生成待审阅 candi
 fake Provider 和 PURE echo；覆盖多段终态、工具顺序、自由文本不派发及进程 kill 后未知结果恢复。
 支持范围和剩余矩阵见 [Host 集成](docs/host-integration.md)，RP-00～RP-07 仍为 OPEN。
 
+会话范围（S06）通过公共 State CAS 与签名命令实现：`session_coordinator.py` 驱动
+每轮消息的持久化协议（重复提交幂等、冲突显式拒绝、跨重启只从已提交 State 恢复），
+`repl.py` 提供最小交互前端与任意轮次的 lineage 诊断；对应证明见
+`tests/contract/test_session_consistency.py`、`tests/acceptance/test_session_recovery.py`
+和 `tests/contract/test_session_repl.py`（pending 恢复、失败轮次记录与 lineage 查询）。
+可选 Messages Provider 包另有合成 loopback 证明（含无法预报价 Provider 的准入拒绝）。
+
 开发工具包通过 `agent-meta-seed build-package <root> --profile tools` 选择，
 沿用显式 publisher key、契约 hash 和 output 参数。它包含 Artifact 读写、
 State 冻结读取/CAS 写入、JSON 规范化，以及 Scratch 创建/执行/观测/Source 导出/释放，

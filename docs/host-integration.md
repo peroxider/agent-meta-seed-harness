@@ -87,8 +87,10 @@ explicit `fake` Provider, with `terminal`, `echo`, `two_echo`, `free_text`,
 Finish the S01A/S02 schema/authority/budget/cancellation/known-result/effect fault
 matrix, independent upgrade/drain/rollback cases, all Context provenance/redaction/ladder
 requirements and independent AC-M17/AC-M48/NFR-M48 proofs. Then publish the Host
-contract version and evaluate RP-00–RP-02. The full S04–S07 Provider/tool/State/
-Scratch/session/Evolution scope remains scheduled; no dependency is VERIFIED.
+contract version and evaluate RP-00–RP-02. The S06 session scope (coordinator,
+recovery and the interactive REPL front-end) carries named development proofs on
+the real daemon; the full S04–S07 release matrices, the live Provider proof and
+the S07 Evolution scope remain scheduled; no dependency is VERIFIED.
 
 ## Frozen Context development profile
 
