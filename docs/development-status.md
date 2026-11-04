@@ -120,6 +120,11 @@ against a real daemon.
   Upgrade tests cover cutover, frozen confirmed-work drain, removal
   of a drained old package while the new version serves and a bad candidate
   preserving healthy serving. Cutover immediately revokes old scoped grants.
+  The SH-GOV-02 evolution-release module runs the same approved-cutover,
+  unhealthy-candidate, terminal-uninstall and fresh-approved-activation
+  rollback drill for the tools package (the S07-relevant bundle); candidate-
+  configuration promotion has no public interface on the pinned wheel
+  (RP-06 OPEN).
 - Public API 1.4 adds ordinary own-key Actor registration, bounded delegation
   and authorized revocation. Consumer tests separate acceptance-time Surface
   filtering from invocation-time checks and revoke permissions at actual
