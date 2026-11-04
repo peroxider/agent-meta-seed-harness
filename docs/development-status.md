@@ -228,7 +228,13 @@ against a real daemon.
   failed stage terminal; the named partial SH-GOV-04 module
   (`tests/contract/test_evolution_code_governance.py`) additionally proves
   the release gates are not waivable — a drifted or fabricated signature is
-  refused on a real daemon. World
+  refused on a real daemon. The named partial SH-EVO-05 module
+  (`tests/acceptance/test_evolution_code_release.py`) drills the full
+  code-candidate release: real defect history through the bounded trigger
+  policy, single-pass budget-gated staging (`evolution/code_release.py`),
+  agent activation refusals, operator-signed cutover with frozen old-task
+  drain, a failed candidate that never realizes, and rollback with
+  restart-verified receipt replay. World
   registration has no public interface on the pinned wheel (RP-06 OPEN), so the
   matrix is provable up to the World gate, and evidence-string validation at
   `Evolution.Propose` remains Seed-side collector work.

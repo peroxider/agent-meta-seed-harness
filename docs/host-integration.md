@@ -475,6 +475,23 @@ with provenance bound to the isolated candidate tree, validates clean, while
 a content drift that was not re-signed and a fabricated signature artifact
 are both refused with `manifest.signature_invalid` — no path reaches a
 valid manifest without the publisher's signing key, which never enters the
-candidate generator context. The signed activation and drain/rollback drill
-for a code candidate stays with SH-EVO-05 (`RP-06 OPEN` on the pinned wheel
-for the evidence-driven candidate generation pipeline).
+candidate generator context.
+
+The named partial SH-EVO-05 module `tests/acceptance/test_evolution_code_release.py`
+runs the code-candidate release drill end to end on a real daemon: a code
+defect observed in real task history (a failed task whose public bounded
+trace feeds the bounded trigger policy) generates one candidate through the
+explicit single-pass staging (`evolution/code_release.py` — budget-gated
+generation, provenance bound to the isolated tree, activation inputs
+returned as plain data with nothing signed); the day's exhausted budget is
+terminal with no retry or scheduled rerun; the candidate bundle installs
+into its own slot; an activation envelope without the package's exact signed
+grant requests — or with fabricated ones — is refused `AUTHORITY_DENIED`
+committing nothing; the operator-signed activation cuts serving over while
+the frozen old task drains under its frozen composition on the old version;
+an unhealthy third candidate never realizes (desired advances, realized and
+serving stay); and rollback is a fresh approved operator activation of the
+old package whose receipt replays identically after a real owner restart
+while confirmed results keep their exact receipts. The evidence-driven
+generation pipeline upstream of the candidate tree (Candidate/World/
+Experiment registration) stays gated (RP-06 OPEN).
