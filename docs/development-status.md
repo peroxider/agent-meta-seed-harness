@@ -185,7 +185,18 @@ against a real daemon.
   an ArtifactId in the CandidateId position) are all refused with no object
   auto-created — serving refs and the public meta revision are identical after
   the whole matrix — while a Proposal against the real serving composition is
-  admitted with resolvable `why` provenance and never moves serving. World
+  admitted with resolvable `why` provenance and never moves serving. The
+  first Seed-side evidence collector leg now exists
+  (`agent_meta_seed_harness/evolution/collector.py`): task history from
+  public bounded traces is aggregated into a canonical evidence fixture, and
+  `source_evidence_ids` are resolved fail-closed before any Proposal — fact
+  references must appear in the observed traces, artifact references must
+  resolve through the public manifest, and empty/unknown/malformed evidence
+  exits `InsufficientEvidence` committing nothing. The named partial
+  SH-EVO-01 module `tests/acceptance/test_evolution_pipeline.py` pins the
+  real-history Proposal path and the refusal matrix on a real daemon; the
+  remaining Candidate/World/Experiment pipeline is unreachable on the pinned
+  wheel (RP-06 OPEN). World
   registration has no public interface on the pinned wheel (RP-06 OPEN), so the
   matrix is provable up to the World gate, and evidence-string validation at
   `Evolution.Propose` remains Seed-side collector work.

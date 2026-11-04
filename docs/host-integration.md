@@ -407,7 +407,23 @@ Candidate) registration has no public interface on the pinned Runtime wheel
 (RP-06 OPEN; `create_world` has no command caller), so admission refusals are
 provable only up to the World gate — deeper Candidate/Composition checks stay
 unreachable rather than unexercised. The raw `Evolution.Propose` records
-`source_evidence_ids` as opaque strings without resolving them; the plan's
-fail-closed evidence policy (insufficient-evidence exit, real Fact references)
-belongs to Seed's own collector module, which is still missing and remains a
-named gap for `tests/acceptance/test_evolution_pipeline.py`.
+`source_evidence_ids` as opaque strings without resolving them; resolution is
+entirely Seed-side responsibility.
+
+The first collector leg now exists:
+`agent_meta_seed_harness/evolution/collector.py` reads task history through
+public bounded traces (`Task.GetTrace`), aggregates per-task action status and
+failure modes into a canonical `seed-evolution-evidence/v1` fixture Artifact,
+and authors a Proposal whose `source_evidence_ids` are resolved fail-closed
+before anything is committed — `fact://` references must appear in the
+observed traces (a probe showed `Graph.Why` cannot distinguish a real from a
+fabricated well-formed id, so observed history is the only reliable anchor),
+`artifact://` references must resolve through the public manifest, and
+unknown task ids, empty history or unknown schemes exit as
+`InsufficientEvidence` with no fixture, no Proposal and unchanged
+serving/meta state. The named partial SH-EVO-01 module
+`tests/acceptance/test_evolution_pipeline.py` pins the real-history Proposal
+path with resolvable provenance and the whole refusal matrix on a real
+daemon. The remaining S07 pipeline (Candidate/World/Experiment/Evaluation
+fixture drive and governance) is unreachable on the pinned wheel and stays a
+named gap.
