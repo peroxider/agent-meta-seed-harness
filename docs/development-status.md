@@ -224,7 +224,12 @@ Tasks. They cover text/tool history, independent wire billing, unknown usage,
 accepted disconnect and pre-admission refusal, including the S04 fail-closed
 rule: a Provider profile that cannot state a firm pre-call maximum cost (no
 price policy) is refused `FAILED_PRECONDITION` at MODEL admission with zero
-invocations and zero wire requests under a Task cost ceiling. Minimal still
+invocations and zero wire requests under a Task cost ceiling. Named recovery
+proofs additionally pin the pre-send boundary (settlement `NOT_SENT`, zero
+liability, never resent after restart) and the deadline boundary (Task deadline
+during an in-flight request settles `UNKNOWN` with the full reservation as
+liability; a late upstream response cannot reverse the outcome, the invocation
+identity or the replayed terminal). Minimal still
 uses its original fake binding. These synthetic checks do not establish the
 selected GLM gateway, captured R2, a real exact tokenizer/tariff, Managed/EffectIntent or RP-03 closure.
 

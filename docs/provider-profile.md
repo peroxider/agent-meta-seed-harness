@@ -139,6 +139,37 @@ single-attempt behavior and unknown cost retaining its maximum liability.
 Crash cases inspect the same public liability record and require null transport
 metadata when no observation committed. A retry hint never authorizes a resend.
 
+## Durable request lookup/idempotency support matrix
+
+The selected upstream surface (`anthropic-messages-terminal/v1` against the
+operator's gateway) declares no durable request lookup and no idempotency key:
+the profile fixes a single terminal `POST /messages` exchange with no
+status-lookup endpoint and no upstream request identity that a later call could
+query. The lookup half of the matrix is therefore `UNSUPPORTED — not
+implemented`; no code path claims upstream lookup support it cannot exercise.
+
+The resulting boundary behavior is pinned by named public consumer proofs in
+`tests/contract/test_provider_recovery.py`:
+
+- Ambiguous outcome (connection loss after send, owner death, Task deadline
+  during an in-flight request): the invocation settles `UNKNOWN` with
+  `EXTERNAL_EFFECT_UNKNOWN` and liability equal to the full reservation; the
+  Task terminal replays byte-identically after restart. The seed loop and Retry
+  Policy never automatically re-call the Provider, and a `retry_after_us` hint
+  never authorizes a resend of an unknown or settled effect.
+- Provably-not-accepted outcome (pre-send failure: no listener, refused before
+  any wire byte): the invocation settles `NOT_SENT` with zero liability and
+  zero usage; nothing is resent on recovery, and a new explicitly submitted
+  Task fails identically while the endpoint is unreachable. Only this provable
+  non-admission boundary permits a policy-governed retry, and the current
+  profile's policy still requires an explicit new Task submission.
+
+The deadline-during-request case additionally proves a late upstream response
+cannot reverse the settled UNKNOWN outcome, the invocation identity or the
+replayed Task terminal, and that the retained protected credential keeps
+serving new Tasks afterwards. These are synthetic loopback observations; they
+do not measure the gateway's real timeout or retry semantics.
+
 ADR 074 corrects a request-profile bug: application data and JSON Schema
 properties named `thinking`, `cache_control` or `server_tool` no longer count
 as protocol switches. Actual protocol extensions are still rejected at their

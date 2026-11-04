@@ -119,3 +119,148 @@ def test_provider_crash_remains_unknown_after_restart_without_resend(tmp_path,bo
                     finally:
                         await client.aclose()
                 asyncio.run(recover())
+
+
+async def prepare_provider(data,authority,bundle,manifest,configuration):
+    client=await connect(data,authority=authority)
+    try:
+        for ref,raw in sorted(bundle.artifacts.items()):
+            assert (await client.put_artifact(realm_id='realm://main',actor_id=authority.actor_id,content=raw,
+                kind='code',media_type='application/octet-stream'))['artifact_id']==ref
+        report=await client.validate_harness_package(bundle.manifest_artifact_id)
+        assert report['valid'],report
+    finally:
+        await client.aclose()
+    installed=await asyncio.to_thread(admin,data,'harness','install','--name',manifest['package_name'],
+        '--version',manifest['package_version'],bundle.manifest_artifact_id,bundle.package_artifact_id)
+    handle=await asyncio.to_thread(provision,data)
+    await asyncio.to_thread(admin,data,'harness','configure-provider',installed['harness_id'],
+        '--capability','capability://seed.messages-model','--profile-artifact',configuration['profile_artifact_id'],
+        '--credential-handle',handle)
+    await asyncio.to_thread(activate_seed,data,bundle,installed['harness_id'])
+    await wait_ready(data)
+
+
+def test_provider_presend_failure_is_known_never_unknown_and_never_resent(tmp_path):
+    with loopback_provider(tmp_path,'text') as (server,ca):
+        configuration,artifacts=provider_inputs(server.server_port)
+        bundle,publisher=provider_bundle(configuration,artifacts)
+        manifest=json.loads(bundle.artifacts[bundle.manifest_artifact_id])
+        # The profile now points at a port with no listener: the request can
+        # never be sent, so the boundary is observable with zero wire bytes.
+        server.shutdown(); server.server_close()
+        with daemon_process(tmp_path,publishers=[publisher],label='presend',controlled_provider_test_ca=ca) as owner:
+            data=owner.data_dir
+            authority=create_actor(data,permissions=['artifact.put','task.submit','model.invoke','capability.invoke'])
+            async def run():
+                client=await connect(data,authority=authority)
+                try:
+                    await prepare_provider(data,authority,bundle,manifest,configuration)
+                    uploaded=await client.put_artifact(realm_id='realm://main',actor_id=authority.actor_id,
+                        content=canonical_json({'provider':'messages','value':'presend boundary'}),kind='task_input',media_type='application/json')
+                    task=await client.submit_task(realm_id='realm://main',actor_id=authority.actor_id,
+                        input_artifact_id=uploaded['artifact_id'],budget={'max_cost_microunits':100000})
+                    result,done=await client.wait_task(task.task_id,timeout_s=30)
+                    assert done and result['status']=='FAILED' and result['error']=='BACKEND_UNAVAILABLE',result
+                    execution=await client.get_task_execution(task.task_id)
+                    assert len(execution['invocations'])==1 and execution['invocations'][0]['status']=='FAILED'
+                    assert execution['invocations'][0]['error']=='BACKEND_UNAVAILABLE'
+                    assert execution['invocations'][0]['output_artifact_id'] is None
+                    accounting=execution['invocations'][0]['provider']
+                    assert accounting['settlement']['outcome']=='NOT_SENT'
+                    assert accounting['settlement']['liability_microunits']==0
+                    assert accounting['settlement']['usage']['cost_microunits']==0
+                    assert accounting['reservation']['maximum_cost_microunits']>0
+                    return uploaded['artifact_id'],execution['invocations'][0]['invocation_id'],task.task_id
+                finally:
+                    await client.aclose()
+            input_ref,invocation_id,task_id=asyncio.run(run())
+        with daemon_process(tmp_path,publishers=[publisher],label='presend-restart',controlled_provider_test_ca=ca):
+            async def recover():
+                client=await connect(data,authority=authority)
+                try:
+                    again=await client.get_task_execution(task_id)
+                    assert again['invocations'][0]['invocation_id']==invocation_id
+                    assert again['invocations'][0]['provider']['settlement']['outcome']=='NOT_SENT'
+                    # A fresh Task fails identically: nothing is resent and
+                    # no new attempt is minted for the unsent request.
+                    fresh=await client.submit_task(realm_id='realm://main',actor_id=authority.actor_id,
+                        input_artifact_id=input_ref,budget={'max_cost_microunits':100000})
+                    result,done=await client.wait_task(fresh.task_id,timeout_s=30)
+                    assert done and result['status']=='FAILED' and result['error']=='BACKEND_UNAVAILABLE',result
+                    fresh_execution=await client.get_task_execution(fresh.task_id)
+                    assert len(fresh_execution['invocations'])==1
+                    assert fresh_execution['invocations'][0]['provider']['settlement']['outcome']=='NOT_SENT'
+                finally:
+                    await client.aclose()
+            asyncio.run(recover())
+
+
+def test_provider_deadline_marks_unknown_and_a_late_response_cannot_reverse_it(tmp_path):
+    with loopback_provider(tmp_path,'hold') as (server,ca):
+        configuration,artifacts=provider_inputs(server.server_port)
+        bundle,publisher=provider_bundle(configuration,artifacts)
+        manifest=json.loads(bundle.artifacts[bundle.manifest_artifact_id])
+        with daemon_process(tmp_path,publishers=[publisher],label='deadline',controlled_provider_test_ca=ca) as owner:
+            data=owner.data_dir
+            authority=create_actor(data,permissions=['artifact.put','task.submit','model.invoke','capability.invoke'])
+            async def run():
+                client=await connect(data,authority=authority)
+                try:
+                    await prepare_provider(data,authority,bundle,manifest,configuration)
+                    uploaded=await client.put_artifact(realm_id='realm://main',actor_id=authority.actor_id,
+                        content=canonical_json({'provider':'messages','value':'deadline boundary'}),kind='task_input',media_type='application/json')
+                    # The Task deadline fires before the fixture's held response.
+                    task=await client.submit_task(realm_id='realm://main',actor_id=authority.actor_id,
+                        input_artifact_id=uploaded['artifact_id'],deadline_at_us=time.time_ns()//1000+2_000_000,
+                        budget={'max_cost_microunits':100000})
+                    async with asyncio.timeout(8):
+                        while not server.received.is_set():
+                            await asyncio.sleep(.005)
+                    result,done=await client.wait_task(task.task_id,timeout_s=20)
+                    # Both fail-closed Task labels are legitimate when the
+                    # deadline fires while the wire request is in flight:
+                    # TIMED_OUT when the owned worker exit is confirmed,
+                    # FAILED_RECOVERY when cancellation cannot confirm it.
+                    # The invocation accounting below is identical in both.
+                    assert done and (result['status'],result['error']) in (
+                        ('TIMED_OUT','DEADLINE_EXCEEDED'),('FAILED_RECOVERY','EXTERNAL_EFFECT_UNKNOWN')),result
+                    execution=await client.get_task_execution(task.task_id)
+                    assert execution['status']==result['status'] and execution['error']==result['error']
+                    assert len(execution['invocations'])==1 and execution['invocations'][0]['status']=='FAILED'
+                    assert execution['invocations'][0]['error']=='EXTERNAL_EFFECT_UNKNOWN'
+                    accounting=execution['invocations'][0]['provider']
+                    assert accounting['terminal']['state']=='UNKNOWN'
+                    assert accounting['terminal']['error_code']=='EXTERNAL_EFFECT_UNKNOWN'
+                    assert accounting['settlement']['outcome']=='UNKNOWN'
+                    assert accounting['settlement']['usage']['cost_microunits'] is None
+                    assert accounting['settlement']['liability_microunits']==accounting['reservation']['maximum_cost_microunits']>0
+                    assert execution['consumed_budget']['model_calls']==1
+                    assert execution['consumed_budget']['cost_microunits'] is None
+                    assert len(server.requests)==1 and all(server.authorized)
+                    # The provider answers late; the settled UNKNOWN outcome,
+                    # the invocation identity and the terminal cannot change.
+                    server.release.set()
+                    await asyncio.sleep(2)
+                    again=await client.get_task_execution(task.task_id)
+                    assert again['invocations'][0]['invocation_id']==execution['invocations'][0]['invocation_id']
+                    assert again['invocations'][0]['provider']['settlement']==accounting['settlement']
+                    replayed,terminal=await client.wait_task(task.task_id,timeout_s=5)
+                    assert terminal and replayed==result
+                    assert len(server.requests)==1
+                    return task.task_id,execution['invocations'][0]['invocation_id'],dict(accounting['settlement'])
+                finally:
+                    await client.aclose()
+            task_id,invocation_id,settlement=asyncio.run(run())
+        owner.process.kill(); owner.process.wait(timeout=10)
+        with daemon_process(tmp_path,publishers=[publisher],label='deadline-restart',controlled_provider_test_ca=ca):
+            async def recover():
+                client=await connect(data,authority=authority)
+                try:
+                    again=await client.get_task_execution(task_id)
+                    assert again['invocations'][0]['invocation_id']==invocation_id
+                    assert again['invocations'][0]['provider']['settlement']==settlement
+                    assert len(server.requests)==1
+                finally:
+                    await client.aclose()
+            asyncio.run(recover())

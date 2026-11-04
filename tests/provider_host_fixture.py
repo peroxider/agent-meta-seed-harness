@@ -101,6 +101,22 @@ class Handler(BaseHTTPRequestHandler):
         if self.server.mode=='disconnect':
             self.connection.shutdown(socket.SHUT_RDWR); self.close_connection=True
             return
+        if self.server.mode=='hold':
+            self.connection.settimeout(30)
+            self.server.release.wait(30)
+            count=len(canonical_json({key:body[key] for key in ('messages','system','tools','tool_choice') if key in body}))
+            response={'id':'msg_synthetic','type':'message','role':'assistant','model':MODEL,
+                'content':[{'type':'text','text':'late response'}],'stop_reason':'end_turn','stop_sequence':None,
+                'usage':{'input_tokens':count,'output_tokens':1}}
+            raw=canonical_json(response)
+            try:
+                self.send_response(200); self.send_header('Content-Type','application/json')
+                self.send_header('Content-Length',str(len(raw))); self.send_header('Connection','close')
+                self.end_headers(); self.wfile.write(raw)
+            except (ConnectionError,ssl.SSLError):
+                pass
+            self.close_connection=True
+            return
         count=len(canonical_json({key:body[key] for key in ('messages','system','tools','tool_choice') if key in body}))
         resource=self.server.mode in ('resource_tools','resource_business_fields')
         tool=(self.server.mode=='tools' or resource) and len(self.server.requests)==1
@@ -132,6 +148,7 @@ def loopback_provider(root,mode):
     server=Server(('127.0.0.1',0),Handler)
     server.mode,server.requests,server.authorized=mode,[],[]
     server.received,server.peer_closed=threading.Event(),threading.Event()
+    server.release=threading.Event()
     context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER); context.load_cert_chain(ca,private)
     server.socket=context.wrap_socket(server.socket,server_side=True)
     thread=threading.Thread(target=server.serve_forever,kwargs={'poll_interval':.01},daemon=True); thread.start()
