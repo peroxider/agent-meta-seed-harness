@@ -440,3 +440,15 @@ and actual values in the details) committing nothing.
 changed since observation`) — every refusal leaves the public meta revision
 and serving refs unchanged. The fixed adjudicator and signed binding are
 Runtime-internal on this wheel and remain unpinned.
+
+The first S08 artifact-candidate governance leg exists too:
+`agent_meta_seed_harness/evolution/artifact_candidate.py` builds
+`REPLACE_ARTIFACT` candidates fail-closed — the live old value is read
+through the public Artifact store and the candidate is bound to its SHA-256
+(stale expected hashes are refused after the artifact moves on), kinds
+outside the whitelist (`tool_descriptor`, `skill_doc`, `prompt_policy`) are
+refused before anything is built, a candidate may not replace its own frozen
+evaluator, and the approval preview is a deterministic canonical hash/path
+diff. The named partial SH-GOV-03 module
+`tests/contract/test_evolution_artifact_governance.py` pins these legs on a
+real daemon; the experiment/promotion legs stay gated (RP-06 OPEN).

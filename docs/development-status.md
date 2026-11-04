@@ -209,7 +209,12 @@ against a real daemon.
   observations refuse `REVISION_CONFLICT` committing nothing) and
   `Evolution.Rollback` requires the `composition.rollback` permission and
   refuses fabricated parents and stale serving observations with the public
-  meta revision and serving refs unchanged. World
+  meta revision and serving refs unchanged. The first S08 artifact-candidate
+  governance leg (`evolution/artifact_candidate.py`) builds REPLACE_ARTIFACT
+  candidates fail-closed over the public Artifact store: live old value
+  hash-binding with stale-hash refusal, kind whitelist, evaluator-independence
+  and a deterministic canonical diff preview
+  (`tests/contract/test_evolution_artifact_governance.py`). World
   registration has no public interface on the pinned wheel (RP-06 OPEN), so the
   matrix is provable up to the World gate, and evidence-string validation at
   `Evolution.Propose` remains Seed-side collector work.
