@@ -234,7 +234,12 @@ liability; a late upstream response cannot reverse the outcome, the invocation
 identity or the replayed terminal). A containment proof scans every public
 surface after a real model+tool run — including the public `doctor` report
 with zero findings — and finds no secret value or derived hash; the credential
-exists only as its opaque handle. Minimal still
+exists only as its opaque handle. The named SH-PROV-03 module
+(`tests/acceptance/test_live_provider.py`) now carries the live job's
+fail-closed scaffolding — explicit enablement, hard count/cost/timeout limits
+and missing-credential refusals with zero invocations and zero wire bytes —
+while the real controlled live call stays operator-gated and the row remains
+PLANNED. Minimal still
 uses its original fake binding. These synthetic checks do not establish the
 selected GLM gateway, captured R2, a real exact tokenizer/tariff, Managed/EffectIntent or RP-03 closure.
 

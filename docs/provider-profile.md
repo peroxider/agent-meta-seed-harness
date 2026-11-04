@@ -181,6 +181,18 @@ and Fact, and the credential appears only as the opaque
 `credential://…` handle in the provider configuration. This is a public
 API/owned-process observation, not private-store inspection.
 
+The named SH-PROV-03 module (`tests/acceptance/test_live_provider.py`) now
+exists as the live job's fail-closed scaffolding. Its gates refuse before any
+wire byte: a missing operator authorization file, the committed example's
+no-permission defaults, a missing hard request-count/cost-ceiling/timeout
+limit, paid fallback, plaintext credential material, or an unresolvable
+credential handle. Against a real daemon, a Task without any provider binding
+refuses `FAILED_PRECONDITION` and one with an approved-but-unresolvable
+handle refuses `KEY_UNAVAILABLE` — both with zero invocations and zero wire
+requests observed at the loopback listener. The real controlled live call
+remains a separate operator-gated job; the traceability row stays PLANNED
+until that evidence exists.
+
 ADR 074 corrects a request-profile bug: application data and JSON Schema
 properties named `thinking`, `cache_control` or `server_tool` no longer count
 as protocol switches. Actual protocol extensions are still rejected at their
