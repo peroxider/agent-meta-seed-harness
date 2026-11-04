@@ -25,7 +25,7 @@ BUSINESS_PROTOCOL_WORDS={'from':'synthetic-provider','thinking':{'type':'enabled
     'cache_control':{'type':'ephemeral'},'server_tool':{'name':'web_search'}}
 
 
-def provider_inputs(port=443):
+def provider_inputs(port=443, *, priced=True):
     artifacts={}
     def add(body):
         raw=canonical_json(body); ref='artifact://sha256/'+sha256_hex(raw)
@@ -34,7 +34,7 @@ def provider_inputs(port=443):
     egress=add({'schema':'provider-egress/v1','scheme':'https','host':'localhost','port':port,'path':'/messages',
         'networks':['127.0.0.1/32','::1/128'],'profile':'CONTROLLED_TEST_ONLY'})
     tokenizer=add({'schema':'provider-tokenizer/v1','model_id':MODEL,'algorithm':'CONTROLLED_TEST_UTF8_BYTES_V1','tokenizer_id':'utf8-bytes/v1'})
-    price=add({'schema':'provider-price/v1','currency':'TEST','pricing_version':'synthetic-test-v1','rounding':'CEIL_EACH_DIMENSION_MICROUNIT',
+    price=None if not priced else add({'schema':'provider-price/v1','currency':'TEST','pricing_version':'synthetic-test-v1','rounding':'CEIL_EACH_DIMENSION_MICROUNIT',
         'input_microunits_per_million_tokens':1000000,'output_microunits_per_million_tokens':2000000,'minimum_cost_microunits':0})
     profile=add({'schema':'provider-profile/v1','protocol':'anthropic-messages-terminal/v1','model_id':MODEL,
         'parameter_allowlist':['max_tokens','messages','model','stream','system','tools'],

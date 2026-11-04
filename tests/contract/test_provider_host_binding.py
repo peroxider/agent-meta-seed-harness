@@ -19,10 +19,10 @@ from seed_package import activate_seed,wait_ready
 from seed_runtime import admin,daemon_process
 
 
-@pytest.mark.parametrize('mode',['text','tools','unknown_usage','disconnect','missing_binding','missing_credential','budget','rate'])
+@pytest.mark.parametrize('mode',['text','tools','unknown_usage','disconnect','missing_binding','missing_credential','budget','rate','unpriceable'])
 def test_seed_provider_uses_only_the_public_host_and_controlled_root_transport(tmp_path,mode):
     with loopback_provider(tmp_path,mode) as (server,ca):
-        configuration,artifacts=provider_inputs(server.server_port)
+        configuration,artifacts=provider_inputs(server.server_port,priced=(mode!='unpriceable'))
         bundle,publisher=provider_bundle(configuration,artifacts)
         manifest=json.loads(bundle.artifacts[bundle.manifest_artifact_id])
         with daemon_process(tmp_path,publishers=[publisher],controlled_provider_test_ca=ca) as owner:
@@ -55,8 +55,8 @@ def test_seed_provider_uses_only_the_public_host_and_controlled_root_transport(t
                     terminal,done=await client.wait_task(task.task_id,timeout_s=30)
                     assert done
                     execution=await client.get_task_execution(task.task_id)
-                    if mode in ('missing_binding','missing_credential','budget'):
-                        assert terminal['error']=={'missing_binding':'FAILED_PRECONDITION','missing_credential':'KEY_UNAVAILABLE','budget':'RESOURCE_EXHAUSTED'}[mode],terminal
+                    if mode in ('missing_binding','missing_credential','budget','unpriceable'):
+                        assert terminal['error']=={'missing_binding':'FAILED_PRECONDITION','missing_credential':'KEY_UNAVAILABLE','budget':'RESOURCE_EXHAUSTED','unpriceable':'FAILED_PRECONDITION'}[mode],terminal
                         assert execution['invocations']==[] and server.requests==[]
                         return
                     expected=['MODEL','CAPABILITY','MODEL'] if mode=='tools' else ['MODEL']

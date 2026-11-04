@@ -215,9 +215,12 @@ allowlist. Its public-only consumer tests start the explicit native loopback/TES
 Runtime launcher, provision synthetic credentials through the separate native
 console, approve via signed public commands and use a consumer-owned Actor for
 Tasks. They cover text/tool history, independent wire billing, unknown usage,
-accepted disconnect and pre-admission refusal. Minimal still uses its original
-fake binding. These synthetic checks do not establish the selected GLM gateway,
-captured R2, a real exact tokenizer/tariff, Managed/EffectIntent or RP-03 closure.
+accepted disconnect and pre-admission refusal, including the S04 fail-closed
+rule: a Provider profile that cannot state a firm pre-call maximum cost (no
+price policy) is refused `FAILED_PRECONDITION` at MODEL admission with zero
+invocations and zero wire requests under a Task cost ceiling. Minimal still
+uses its original fake binding. These synthetic checks do not establish the
+selected GLM gateway, captured R2, a real exact tokenizer/tariff, Managed/EffectIntent or RP-03 closure.
 
 The current Runtime development pin passed all 1560 unit cases on its frozen
 input revision, without module exclusions. The Windows worker defects were
