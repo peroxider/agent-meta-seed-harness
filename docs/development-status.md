@@ -62,7 +62,9 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   `seed.state.write` on a session-reserved `SESSION_TRANSCRIPT` State refused
   `AUTHORITY_DENIED` with the guarded CAS unchanged — plus bounded artifact
   reads, explicit per-channel Scratch truncation marking inside the 1 MiB
-  ceiling, and redaction as recorded below.
+  ceiling, and redaction as recorded below. Identical deterministic
+  `normalize_json` calls commit the same content-addressed output ArtifactId
+  on a real daemon while an altered payload commits a distinct one.
 - A consumer-side session coordinator (`agent_meta_seed_harness/session_coordinator.py`)
   now drives the S06 message protocol over public State CAS and exact signed commands
   against a real daemon: identical retries recover the original operation, a
@@ -229,7 +231,10 @@ proofs additionally pin the pre-send boundary (settlement `NOT_SENT`, zero
 liability, never resent after restart) and the deadline boundary (Task deadline
 during an in-flight request settles `UNKNOWN` with the full reservation as
 liability; a late upstream response cannot reverse the outcome, the invocation
-identity or the replayed terminal). Minimal still
+identity or the replayed terminal). A containment proof scans every public
+surface after a real model+tool run — including the public `doctor` report
+with zero findings — and finds no secret value or derived hash; the credential
+exists only as its opaque handle. Minimal still
 uses its original fake binding. These synthetic checks do not establish the
 selected GLM gateway, captured R2, a real exact tokenizer/tariff, Managed/EffectIntent or RP-03 closure.
 

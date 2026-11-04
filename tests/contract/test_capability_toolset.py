@@ -128,3 +128,25 @@ def test_transform_refuses_schema_violations_and_duplicate_json_fields(tmp_path,
             finally:
                 await client.aclose()
         asyncio.run(run())
+
+
+def test_transform_commits_identical_output_artifact_ids_for_identical_calls(tmp_path):
+    with tools_environment(tmp_path) as (owner, actor, state, replacement):
+        async def run():
+            client = await connect(owner.data_dir, authority=actor)
+            try:
+                _, terminal, execution = await submit_tools(client, actor, [
+                    {'name':'seed.transform.normalize_json','arguments':{'json':'{"b":2,"a":1}'}},
+                    {'name':'seed.transform.normalize_json','arguments':{'json':'{"b":2,"a":1}'}},
+                    {'name':'seed.transform.normalize_json','arguments':{'json':'{"b":3,"a":1}'}}])
+                assert terminal['status'] == 'SUCCEEDED', terminal
+                assert [row['kind'] for row in execution['invocations']] == ['MODEL', 'CAPABILITY', 'CAPABILITY', 'CAPABILITY', 'MODEL']
+                transforms = [row for row in execution['invocations'] if row['kind'] == 'CAPABILITY']
+                assert transforms[0]['output_artifact_id'] == transforms[1]['output_artifact_id']
+                assert transforms[2]['output_artifact_id'] != transforms[0]['output_artifact_id']
+                left = await client.get_artifact_content(transforms[0]['output_artifact_id'])
+                right = await client.get_artifact_content(transforms[1]['output_artifact_id'])
+                assert left == right and json.loads(left) == {'value':{'a':1,'b':2}}
+            finally:
+                await client.aclose()
+        asyncio.run(run())

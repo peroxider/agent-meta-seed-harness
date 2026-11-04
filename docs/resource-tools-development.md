@@ -13,6 +13,11 @@ descriptors freeze schemas, effects, idempotency and resource contracts. Grants
 target the exact tool Capability, State owner or `seed_content` Artifact kind;
 there is no REALM_ALL Service grant. Minimal packages retain their original
 source allowlist. A separate Provider tools binding uses the same tool maps.
+A daemon-level determinism proof submits two identical `normalize_json` calls
+inside one frozen Task: both commit the same content-addressed output
+ArtifactId with byte-identical normalized bodies, while an altered payload
+commits a distinct ArtifactId — the deterministic-tool exit gate, not only an
+offline unit property.
 
 The earlier locked API 1.12 input adds ordinary callback schema/redaction/schema
 enforcement before journaling/callback entry and output publication. Invalid

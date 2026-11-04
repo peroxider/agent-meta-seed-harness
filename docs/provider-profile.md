@@ -170,6 +170,17 @@ replayed Task terminal, and that the retained protected credential keeps
 serving new Tasks afterwards. These are synthetic loopback observations; they
 do not measure the gateway's real timeout or retry semantics.
 
+Credential containment is proven on the same public surfaces after a real
+model+tool run (`test_provider_credential_never_leaves_the_handle_boundary`):
+the synthetic fixture secret and its sha256 appear nowhere across the Task
+terminal, execution metadata, Fact trace, Harness configuration, acceptance
+View, projection-bearing surfaces, manifest, grant requests, every uploaded
+Artifact, model/tool outputs and the owned daemon's own stdout/stderr. The
+public operator `doctor` scan reports zero findings over every checked blob
+and Fact, and the credential appears only as the opaque
+`credential://…` handle in the provider configuration. This is a public
+API/owned-process observation, not private-store inspection.
+
 ADR 074 corrects a request-profile bug: application data and JSON Schema
 properties named `thinking`, `cache_control` or `server_tool` no longer count
 as protocol switches. Actual protocol extensions are still rejected at their

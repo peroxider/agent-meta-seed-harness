@@ -12,7 +12,7 @@ import pytest
 
 from agent_meta_runtime.sdk import connect
 from agent_meta_runtime.sdk.host import decode_model_response
-from agent_meta_runtime.sdk.packages import canonical_json
+from agent_meta_runtime.sdk.packages import canonical_json,sha256_hex
 from provider_host_fixture import loopback_provider,provider_inputs,provider_bundle,provision,SECRET
 from seed_actor import create_actor
 from seed_package import activate_seed,wait_ready
@@ -93,6 +93,71 @@ def test_seed_provider_uses_only_the_public_host_and_controlled_root_transport(t
                             assert json.loads(result['content'])=={'value':'typed'}
                     trace=await client.get_task_trace(task.task_id)
                     assert SECRET not in canonical_json({'terminal':terminal,'execution':execution,'trace':trace,'configuration':current})
+                finally:
+                    await client.aclose()
+            asyncio.run(run())
+
+
+def test_provider_credential_never_leaves_the_handle_boundary(tmp_path):
+    with loopback_provider(tmp_path,'tools') as (server,ca):
+        configuration,artifacts=provider_inputs(server.server_port)
+        bundle,publisher=provider_bundle(configuration,artifacts)
+        manifest=json.loads(bundle.artifacts[bundle.manifest_artifact_id])
+        with daemon_process(tmp_path,publishers=[publisher],controlled_provider_test_ca=ca) as owner:
+            data=owner.data_dir
+            authority=create_actor(data,permissions=['artifact.put','task.submit','model.invoke','capability.invoke'])
+            async def run():
+                client=await connect(data,authority=authority)
+                try:
+                    for ref,raw in sorted(bundle.artifacts.items()):
+                        assert (await client.put_artifact(realm_id='realm://main',actor_id=authority.actor_id,content=raw,
+                            kind='code',media_type='application/octet-stream'))['artifact_id']==ref
+                    installed=await asyncio.to_thread(admin,data,'harness','install','--name',manifest['package_name'],
+                        '--version',manifest['package_version'],bundle.manifest_artifact_id,bundle.package_artifact_id)
+                    handle=await asyncio.to_thread(provision,data)
+                    await asyncio.to_thread(admin,data,'harness','configure-provider',installed['harness_id'],
+                        '--capability','capability://seed.messages-model','--profile-artifact',configuration['profile_artifact_id'],
+                        '--credential-handle',handle)
+                    await asyncio.to_thread(activate_seed,data,bundle,installed['harness_id'])
+                    await wait_ready(data)
+                    uploaded=await client.put_artifact(realm_id='realm://main',actor_id=authority.actor_id,
+                        content=canonical_json({'provider':'messages','value':'containment boundary'}),kind='task_input',media_type='application/json')
+                    task=await client.submit_task(realm_id='realm://main',actor_id=authority.actor_id,
+                        input_artifact_id=uploaded['artifact_id'],budget={'max_cost_microunits':100000})
+                    terminal,done=await client.wait_task(task.task_id,timeout_s=30)
+                    assert terminal['status']=='SUCCEEDED',terminal
+                    execution=await client.get_task_execution(task.task_id)
+                    # A real model+tool run must have happened, otherwise the
+                    # scan below proves nothing.
+                    assert [row['kind'] for row in execution['invocations']]==['MODEL','CAPABILITY','MODEL']
+                    assert len(server.requests)==2 and all(server.authorized)
+                    trace=await client.get_task_trace(task.task_id)
+                    harness=await client.get_harness(installed['harness_id'])
+                    view=json.loads(await client.get_artifact_content(execution['acceptance_view_artifact_id']))
+                    doctor=await asyncio.to_thread(admin,data,'doctor')
+                    grants=json.loads(bundle.artifacts[manifest['grant_requests_artifact_id']])
+                    def text_or_hash(raw):
+                        try:
+                            return raw.decode('utf-8')
+                        except UnicodeDecodeError:
+                            return {'sha256':sha256_hex(raw)}
+                    model_outputs=[]
+                    for row in execution['invocations']:
+                        if row['output_artifact_id'] is not None:
+                            model_outputs.append(await client.get_artifact_content(row['output_artifact_id']))
+                    surfaces={'terminal':terminal,'trace':trace,'harness':harness,'view':view,'doctor':doctor,
+                        'manifest':manifest,'grants':grants,'provider_artifacts':{ref:text_or_hash(raw) for ref,raw in bundle.artifacts.items()},
+                        'outputs':model_outputs,'stdout':owner.output.read_text(errors='replace'),
+                        'stderr':owner.errors.read_text(errors='replace')}
+                    blob=json.dumps(surfaces,sort_keys=True,default=lambda value:value.hex() if isinstance(value,(bytes,bytearray)) else str(value)).encode()
+                    blob+=canonical_json({'terminal':terminal,'execution':execution,'trace':trace,'harness':harness,
+                        'view':view,'doctor':doctor,'manifest':manifest,'grants':grants})
+                    assert SECRET not in blob
+                    assert sha256_hex(SECRET).encode() not in blob
+                    assert doctor['ok'] is True and doctor['findings']==[],doctor
+                    reported=harness['provider_configuration']['credential_handle']
+                    assert reported.startswith('credential://') and reported==handle
+                    assert reported.encode() in blob
                 finally:
                     await client.aclose()
             asyncio.run(run())
