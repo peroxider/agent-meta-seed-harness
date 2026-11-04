@@ -427,3 +427,16 @@ path with resolvable provenance and the whole refusal matrix on a real
 daemon. The remaining S07 pipeline (Candidate/World/Experiment/Evaluation
 fixture drive and governance) is unreachable on the pinned wheel and stays a
 named gap.
+
+The named partial SH-GOV-01 module `tests/contract/test_evolution_governance.py`
+pins the wheel's conditional-revision governance on a real daemon:
+`Evolution.Propose` admits a proposal conditioned on the caller's observed
+`expected_meta_revision`, and a stale observation is refused
+`REVISION_CONFLICT` (`command expected meta revision differs`, with expected
+and actual values in the details) committing nothing.
+`Evolution.Rollback` requires the `composition.rollback` permission
+(`AUTHORITY_DENIED` otherwise), refuses a fabricated parent composition with
+`NOT_FOUND`, and refuses a stale serving observation (`serving revision
+changed since observation`) — every refusal leaves the public meta revision
+and serving refs unchanged. The fixed adjudicator and signed binding are
+Runtime-internal on this wheel and remain unpinned.

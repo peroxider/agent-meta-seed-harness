@@ -198,7 +198,13 @@ against a real daemon.
   SH-EVO-01 module `tests/acceptance/test_evolution_pipeline.py` pins the
   real-history Proposal path and the refusal matrix on a real daemon; the
   remaining Candidate/World/Experiment pipeline is unreachable on the pinned
-  wheel (RP-06 OPEN). World
+  wheel (RP-06 OPEN). The named partial SH-GOV-01 module
+  (`tests/contract/test_evolution_governance.py`) pins the conditional
+  revisions: `Evolution.Propose` honors `expected_meta_revision` (stale
+  observations refuse `REVISION_CONFLICT` committing nothing) and
+  `Evolution.Rollback` requires the `composition.rollback` permission and
+  refuses fabricated parents and stale serving observations with the public
+  meta revision and serving refs unchanged. World
   registration has no public interface on the pinned wheel (RP-06 OPEN), so the
   matrix is provable up to the World gate, and evidence-string validation at
   `Evolution.Propose` remains Seed-side collector work.
