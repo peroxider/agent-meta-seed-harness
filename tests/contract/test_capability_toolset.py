@@ -150,3 +150,34 @@ def test_transform_commits_identical_output_artifact_ids_for_identical_calls(tmp
             finally:
                 await client.aclose()
         asyncio.run(run())
+
+
+def test_transform_determinism_survives_a_state_revision_change(tmp_path):
+    with tools_environment(tmp_path) as (owner, actor, state, replacement):
+        async def run():
+            client = await connect(owner.data_dir, authority=actor)
+            try:
+                _, terminal, execution = await submit_tools(client, actor,
+                    [{'name':'seed.transform.normalize_json','arguments':{'json':'{"b":2,"a":1}'}}])
+                assert terminal['status'] == 'SUCCEEDED', terminal
+                first = next(row for row in execution['invocations'] if row['kind'] == 'CAPABILITY')['output_artifact_id']
+                # A real State write advances the CAS revision between the
+                # identical calls; determinism is content-addressed, not
+                # scoped to one revision.
+                _, terminal, execution = await submit_tools(client, actor,
+                    [{'name':'seed.state.write','arguments':{'state_id':state['state_id'],
+                        'expected_state_revision_id':state['state_revision_id'],
+                        'content_artifact_id':replacement}}])
+                assert terminal['status'] == 'SUCCEEDED', terminal
+                current = await client.get_state(realm_id=REALM, actor_id=actor.actor_id, state_id=state['state_id'])
+                assert current['current_revision_id'] != state['state_revision_id'], current
+                _, terminal, execution = await submit_tools(client, actor,
+                    [{'name':'seed.transform.normalize_json','arguments':{'json':'{"b":2,"a":1}'}}])
+                assert terminal['status'] == 'SUCCEEDED', terminal
+                second = next(row for row in execution['invocations'] if row['kind'] == 'CAPABILITY')['output_artifact_id']
+                assert second == first, (first, second)
+                content = await client.get_artifact_content(first)
+                assert json.loads(content) == {'value':{'a':1,'b':2}}
+            finally:
+                await client.aclose()
+        asyncio.run(run())

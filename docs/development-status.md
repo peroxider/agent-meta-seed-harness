@@ -64,7 +64,9 @@ snapshot: changing acceptance scope invalidates earlier consumer evidence.
   reads, explicit per-channel Scratch truncation marking inside the 1 MiB
   ceiling, and redaction as recorded below. Identical deterministic
   `normalize_json` calls commit the same content-addressed output ArtifactId
-  on a real daemon while an altered payload commits a distinct one.
+  on a real daemon while an altered payload commits a distinct one — including
+  across a real State revision change in a fresh task, so determinism is
+  content-addressed rather than scoped to one State revision.
 - A consumer-side session coordinator (`agent_meta_seed_harness/session_coordinator.py`)
   now drives the S06 message protocol over public State CAS and exact signed commands
   against a real daemon: identical retries recover the original operation, a

@@ -5,7 +5,7 @@
 - Independent project and public-consumer architecture checks.
 - Versioned Runtime contract inputs and evidence-based release gates.
 - Public State management consumer and exact signed-command replay after owned daemon kill.
-- Signed development tools package with Artifact/State adapters, deterministic JSON normalization (same content-addressed output ArtifactId for identical calls on a real daemon), scoped grants, per-channel Scratch truncation marking, transcript-State refusal and controlled synthetic Provider integration.
+- Signed development tools package with Artifact/State adapters, deterministic JSON normalization (same content-addressed output ArtifactId for identical calls on a real daemon — including across a real State revision change in a fresh task), scoped grants, per-channel Scratch truncation marking, transcript-State refusal and controlled synthetic Provider integration.
 - Consumer-side session coordinator and REPL front-end over the public message protocol: idempotent journal replay, pending-round recovery on attach, round lineage diagnostics and admission-refused rounds committed with their FAILED terminals.
 - Release-lifecycle fault matrix: stale-plan refusal, envelope replay after owner restart, drained old-version serving, use-limited rollback re-minting and disjoint grant generations.
 - Fail-closed model admission: a Provider profile that cannot state a firm pre-call maximum cost is refused before any wire request under a Task cost ceiling. The named SH-PROV-03 live-job module now gates explicit enablement and hard count/cost/timeout limits with missing-credential refusals that never report success.
