@@ -234,7 +234,13 @@ against a real daemon.
   policy, single-pass budget-gated staging (`evolution/code_release.py`),
   agent activation refusals, operator-signed cutover with frozen old-task
   drain, a failed candidate that never realizes, and rollback with
-  restart-verified receipt replay. World
+  restart-verified receipt replay. The named partial SH-EVO-03 module
+  (`tests/acceptance/test_evolution_tool_pipeline.py`) composes the
+  reachable chain end to end — failure history triggers, evidence and
+  Proposal, hash-bound artifact candidate — and stops before the World gate
+  where RunExperiment/Promote refuse unregistered references (RP-06 OPEN).
+  Every named Seed Harness proof path now exists; all rows await release
+  evidence. World
   registration has no public interface on the pinned wheel (RP-06 OPEN), so the
   matrix is provable up to the World gate, and evidence-string validation at
   `Evolution.Propose` remains Seed-side collector work.

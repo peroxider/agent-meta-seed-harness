@@ -495,3 +495,16 @@ old package whose receipt replays identically after a real owner restart
 while confirmed results keep their exact receipts. The evidence-driven
 generation pipeline upstream of the candidate tree (Candidate/World/
 Experiment registration) stays gated (RP-06 OPEN).
+
+The named partial SH-EVO-03 module `tests/acceptance/test_evolution_tool_pipeline.py`
+composes the reachable chain end to end on one real daemon: real failing
+task history fires the bounded trigger policy (one Proposal-window trigger),
+the evidence collector turns the same history into an evidence fixture and
+an admitted Proposal with resolvable provenance, the artifact candidate is
+bound to the live old value under the REPLACE_ARTIFACT whitelist with a
+frozen criteria artifact and a deterministic approval preview — and the
+chain then stops before the World gate: with no public Candidate/World
+registration interface on the pinned wheel, RunExperiment and Promote refuse
+the unregistered references (`NOT_FOUND`) committing nothing, so the
+deterministic-experiment and Promotion legs stay out of scope. Every named
+Seed Harness proof path now exists; all rows await release evidence.
