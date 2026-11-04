@@ -264,3 +264,74 @@ def test_provider_deadline_marks_unknown_and_a_late_response_cannot_reverse_it(t
                 finally:
                     await client.aclose()
             asyncio.run(recover())
+
+
+def test_cancel_during_inflight_request_settles_unknown_and_replays_after_restart(tmp_path):
+    with loopback_provider(tmp_path,'hold') as (server,ca):
+        configuration,artifacts=provider_inputs(server.server_port)
+        bundle,publisher=provider_bundle(configuration,artifacts)
+        manifest=json.loads(bundle.artifacts[bundle.manifest_artifact_id])
+        with daemon_process(tmp_path,publishers=[publisher],label='cancel-inflight',controlled_provider_test_ca=ca) as owner:
+            data=owner.data_dir
+            authority=create_actor(data,permissions=['artifact.put','task.submit','task.cancel','model.invoke','capability.invoke'])
+            async def run():
+                client=await connect(data,authority=authority)
+                try:
+                    await prepare_provider(data,authority,bundle,manifest,configuration)
+                    uploaded=await client.put_artifact(realm_id='realm://main',actor_id=authority.actor_id,
+                        content=canonical_json({'provider':'messages','value':'cancel boundary'}),kind='task_input',media_type='application/json')
+                    task=await client.submit_task(realm_id='realm://main',actor_id=authority.actor_id,
+                        input_artifact_id=uploaded['artifact_id'],budget={'max_cost_microunits':100000})
+                    async with asyncio.timeout(8):
+                        while not server.received.is_set():
+                            await asyncio.sleep(.005)
+                    # The wire request is in flight; the explicit cancel
+                    # arrives now. The Task ends CANCELLED while the already
+                    # sent external effect settles UNKNOWN with full liability.
+                    cancel=client.build_envelope_jcs(realm_id='realm://main',actor_id=authority.actor_id,
+                        payload_type='task.cancel/v1',payload={'task_id':task.task_id,'reason_code':'requested'},
+                        command_id='task://019a44d0-0000-7000-8000-0000000000c1')
+                    cancellation=await client.execute_command('agent_meta.public.v1.Task.Cancel',cancel)
+                    result,done=await client.wait_task(task.task_id,timeout_s=15)
+                    assert done and result['status']=='CANCELLED',result
+                    execution=await client.get_task_execution(task.task_id)
+                    assert len(execution['invocations'])==1 and execution['invocations'][0]['status']=='FAILED'
+                    assert execution['invocations'][0]['error']=='EXTERNAL_EFFECT_UNKNOWN'
+                    accounting=execution['invocations'][0]['provider']
+                    assert accounting['terminal']['state']=='UNKNOWN'
+                    assert accounting['terminal']['error_code']=='EXTERNAL_EFFECT_UNKNOWN'
+                    assert accounting['settlement']['outcome']=='UNKNOWN'
+                    assert accounting['settlement']['usage']['cost_microunits'] is None
+                    assert accounting['settlement']['liability_microunits']==accounting['reservation']['maximum_cost_microunits']>0
+                    assert execution['consumed_budget']['model_calls']==1
+                    assert execution['consumed_budget']['cost_microunits'] is None
+                    assert len(server.requests)==1 and all(server.authorized)
+                    # The provider answers late; the cancelled outcome, the
+                    # invocation identity and its settlement cannot change.
+                    server.release.set()
+                    await asyncio.sleep(2)
+                    again=await client.get_task_execution(task.task_id)
+                    assert again['invocations'][0]['invocation_id']==execution['invocations'][0]['invocation_id']
+                    assert again['invocations'][0]['provider']['settlement']==accounting['settlement']
+                    replayed,terminal=await client.wait_task(task.task_id,timeout_s=5)
+                    assert terminal and replayed==result
+                    assert len(server.requests)==1
+                    return task.task_id,execution['invocations'][0]['invocation_id'],dict(accounting['settlement']),cancel,cancellation
+                finally:
+                    await client.aclose()
+            task_id,invocation_id,settlement,cancel,cancellation=asyncio.run(run())
+        owner.process.kill(); owner.process.wait(timeout=10)
+        with daemon_process(tmp_path,publishers=[publisher],label='cancel-restart',controlled_provider_test_ca=ca):
+            async def recover():
+                client=await connect(data,authority=authority)
+                try:
+                    again=await client.get_task_execution(task_id)
+                    assert again['invocations'][0]['invocation_id']==invocation_id
+                    assert again['invocations'][0]['provider']['settlement']==settlement
+                    assert await client.execute_command('agent_meta.public.v1.Task.Cancel',cancel)==cancellation
+                    replayed,terminal=await client.wait_task(task_id,timeout_s=5)
+                    assert terminal and replayed['status']=='CANCELLED'
+                    assert len(server.requests)==1
+                finally:
+                    await client.aclose()
+            asyncio.run(recover())

@@ -152,9 +152,12 @@ The resulting boundary behavior is pinned by named public consumer proofs in
 `tests/contract/test_provider_recovery.py`:
 
 - Ambiguous outcome (connection loss after send, owner death, Task deadline
-  during an in-flight request): the invocation settles `UNKNOWN` with
+  during an in-flight request, an explicit Task cancellation arriving while
+  the request is on the wire): the invocation settles `UNKNOWN` with
   `EXTERNAL_EFFECT_UNKNOWN` and liability equal to the full reservation; the
-  Task terminal replays byte-identically after restart. The seed loop and Retry
+  Task terminal replays byte-identically after restart. The Task itself ends
+  `CANCELLED` for an explicit cancel and the cancel envelope replays its
+  durable receipt after an owner restart. The seed loop and Retry
   Policy never automatically re-call the Provider, and a `retry_after_us` hint
   never authorizes a resend of an unknown or settled effect.
 - Provably-not-accepted outcome (pre-send failure: no listener, refused before

@@ -231,7 +231,9 @@ proofs additionally pin the pre-send boundary (settlement `NOT_SENT`, zero
 liability, never resent after restart) and the deadline boundary (Task deadline
 during an in-flight request settles `UNKNOWN` with the full reservation as
 liability; a late upstream response cannot reverse the outcome, the invocation
-identity or the replayed terminal). A containment proof scans every public
+identity or the replayed terminal; an explicit cancel arriving while the
+request is on the wire ends the Task `CANCELLED` with the same UNKNOWN
+settlement and replays its receipt after an owner restart). A containment proof scans every public
 surface after a real model+tool run — including the public `doctor` report
 with zero findings — and finds no secret value or derived hash; the credential
 exists only as its opaque handle. The named SH-PROV-03 module
