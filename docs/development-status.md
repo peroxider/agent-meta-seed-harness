@@ -178,7 +178,18 @@ against a real daemon.
 - Runtime Evolution graph lookup now constrains Composition, Candidate,
   Experiment and World references to the command Realm, including retained
   malformed graphs. Equal revision numbers in different Realms cannot redirect
-  a rollback to a local Composition. Internal regressions do not close S07's
+  a rollback to a local Composition. The named Seed consumer module
+  `tests/contract/test_evolution_policy.py` pins the fail-closed public
+  admission order on a real daemon: unknown propose targets, unknown/malformed
+  criteria artifacts, unregistered Worlds and unregistered candidates (including
+  an ArtifactId in the CandidateId position) are all refused with no object
+  auto-created — serving refs and the public meta revision are identical after
+  the whole matrix — while a Proposal against the real serving composition is
+  admitted with resolvable `why` provenance and never moves serving. World
+  registration has no public interface on the pinned wheel (RP-06 OPEN), so the
+  matrix is provable up to the World gate, and evidence-string validation at
+  `Evolution.Propose` remains Seed-side collector work.
+  Internal regressions do not close S07's
   public registration/governance requirements. Generic RESTORE_PARENT still
   lacks complete current-State CAS and historical serving bindings and remains
   an open implementation defect, separate from approved package reactivation.

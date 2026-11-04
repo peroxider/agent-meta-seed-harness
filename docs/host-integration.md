@@ -381,3 +381,33 @@ The model/tool process-kill recovery suites also select this Backend and
 independently observe callback counts. This is Windows development evidence;
 the profile remains trusted Python, cooperative, zero-cost/PURE with EMULATED
 persistence and no process/network/credential/hard-quota isolation claim.
+
+## Evolution admission boundary
+
+The named `tests/contract/test_evolution_policy.py` pins the fail-closed
+admission order of the pinned Runtime's public Evolution commands on a real
+daemon, without importing Runtime store modules. `Evolution.Propose` with an
+unknown target composition refuses `NOT_FOUND`; against the real serving
+composition it admits a Proposal whose `why` provenance resolves, and a bare
+Proposal never moves serving refs. `Evolution.RunExperiment` refuses in
+declared order — unknown criteria ArtifactId (`NOT_FOUND`), malformed
+`deterministic-evaluation/v1` criteria (`INVALID_ARGUMENT` with named issues),
+then the unregistered World (`NOT_FOUND` with the echoed `world_id`) — and an
+ArtifactId passed in the CandidateId position never gets past admission.
+`Evolution.Promote` refuses any unregistered Candidate, including an ArtifactId
+in the CandidateId position, with `NOT_FOUND`. Every refusal commits nothing:
+serving refs and the public meta revision are identical after the whole matrix,
+so no Proposal/Experiment/Candidate/World is auto-created and serving never
+drifts. An Actor without `experiment.run`/`composition.promote` authority is
+refused `AUTHORITY_DENIED` on all three commands with the meta revision
+unchanged.
+
+Two boundaries are observed and left to their owners. World (and therefore
+Candidate) registration has no public interface on the pinned Runtime wheel
+(RP-06 OPEN; `create_world` has no command caller), so admission refusals are
+provable only up to the World gate — deeper Candidate/Composition checks stay
+unreachable rather than unexercised. The raw `Evolution.Propose` records
+`source_evidence_ids` as opaque strings without resolving them; the plan's
+fail-closed evidence policy (insufficient-evidence exit, real Fact references)
+belongs to Seed's own collector module, which is still missing and remains a
+named gap for `tests/acceptance/test_evolution_pipeline.py`.
