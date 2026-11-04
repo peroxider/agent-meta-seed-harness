@@ -458,3 +458,23 @@ never triggers — and enforces one Proposal per window with a per-target-path
 cooldown that a fresh window cannot bypass and a frozen ceiling that refuses
 wider policies; `tests/contract/test_evolution_artifact_policy.py` pins
 these bounds over a real failing task.
+
+The first S09 code-candidate governance leg exists too:
+`agent_meta_seed_harness/evolution/package_candidate.py` treats a code
+candidate as a full new AMPAK package version with no fast lane. The
+candidate source tree is physically isolated — built from explicit copied
+bytes that never mutate the live sources — and identity-bound: the same
+package version cannot carry different content without advancing the
+descriptor revision. The per-day candidate budget is bounded by a frozen
+ceiling the builder cannot raise, and an exhausted or failed stage is
+terminal — nothing is retried, rescheduled or looped. The named partial
+SH-GOV-04 module `tests/contract/test_evolution_code_governance.py` pins
+these legs and proves on a real daemon that the release gates are not
+waivable: the candidate bundle is built through the same signed S03 path
+with provenance bound to the isolated candidate tree, validates clean, while
+a content drift that was not re-signed and a fabricated signature artifact
+are both refused with `manifest.signature_invalid` — no path reaches a
+valid manifest without the publisher's signing key, which never enters the
+candidate generator context. The signed activation and drain/rollback drill
+for a code candidate stays with SH-EVO-05 (`RP-06 OPEN` on the pinned wheel
+for the evidence-driven candidate generation pipeline).

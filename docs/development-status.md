@@ -220,7 +220,15 @@ against a real daemon.
   empty history, enforces one Proposal per window with a per-target-path
   cooldown that a fresh window cannot bypass, and refuses policies wider
   than the frozen ceiling
-  (`tests/contract/test_evolution_artifact_policy.py`). World
+  (`tests/contract/test_evolution_artifact_policy.py`). The first S09
+  code-candidate governance leg (`evolution/package_candidate.py`) isolates
+  candidate source trees from the live sources, binds candidate identity to
+  a content hash that cannot change without a descriptor-revision advance,
+  bounds the per-day candidate budget under a frozen ceiling and makes every
+  failed stage terminal; the named partial SH-GOV-04 module
+  (`tests/contract/test_evolution_code_governance.py`) additionally proves
+  the release gates are not waivable — a drifted or fabricated signature is
+  refused on a real daemon. World
   registration has no public interface on the pinned wheel (RP-06 OPEN), so the
   matrix is provable up to the World gate, and evidence-string validation at
   `Evolution.Propose` remains Seed-side collector work.
