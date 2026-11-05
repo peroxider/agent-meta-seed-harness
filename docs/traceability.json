@@ -194,7 +194,7 @@
       "evidence": null,
       "id": "SH-EVO-01",
       "profile": "evolution",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/acceptance/test_evolution_pipeline.py"
       ]
@@ -203,7 +203,7 @@
       "evidence": null,
       "id": "SH-EVO-02",
       "profile": "evolution",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/contract/test_evolution_policy.py"
       ]
@@ -212,7 +212,7 @@
       "evidence": null,
       "id": "SH-GOV-01",
       "profile": "evolution",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/contract/test_evolution_governance.py"
       ]
@@ -221,7 +221,7 @@
       "evidence": null,
       "id": "SH-GOV-02",
       "profile": "evolution",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/acceptance/test_evolution_release.py"
       ]
@@ -230,7 +230,7 @@
       "evidence": null,
       "id": "SH-EVO-03",
       "profile": "evolution-artifact",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/acceptance/test_evolution_tool_pipeline.py"
       ]
@@ -239,7 +239,7 @@
       "evidence": null,
       "id": "SH-EVO-04",
       "profile": "evolution-artifact",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/contract/test_evolution_artifact_policy.py"
       ]
@@ -248,7 +248,7 @@
       "evidence": null,
       "id": "SH-GOV-03",
       "profile": "evolution-artifact",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/contract/test_evolution_artifact_governance.py"
       ]
@@ -257,7 +257,7 @@
       "evidence": null,
       "id": "SH-EVO-05",
       "profile": "evolution-code",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/acceptance/test_evolution_code_release.py"
       ]
@@ -266,7 +266,7 @@
       "evidence": null,
       "id": "SH-GOV-04",
       "profile": "evolution-code",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "tests": [
         "tests/contract/test_evolution_code_governance.py"
       ]

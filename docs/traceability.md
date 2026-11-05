@@ -55,7 +55,15 @@ Backend in Windows development; the complete release matrix remains open.
 | SH-CAP-02 | tools | IN_PROGRESS | `tests/acceptance/test_capability_toolset.py`, `tests/acceptance/test_scratch_tools.py`, `tests/acceptance/test_scratch_recovery.py`, `tests/acceptance/test_scratch_retirement.py`, `tests/acceptance/test_scratch_backup.py` |
 | SH-SESS-01 | session | IN_PROGRESS | Schema preparation in `tests/contract/test_session_documents.py` and `tests/contract/test_session_document_state.py`; `tests/contract/test_session_consistency.py` now covers the named consistency matrix (dedup/conflict, concurrency refusal, summary provenance, journal non-self-expiry, control fields out of Projection, State conflict with frozen serving) in development |
 | SH-SESS-02 | session | IN_PROGRESS | `tests/acceptance/test_session_recovery.py` kills the daemon at every named protocol boundary and recovers from committed State only; UNKNOWN (`FAILED_RECOVERY`) outcomes are recorded without redispatch and the session stays usable |
-| SH-EVO-01 | evolution | PLANNED | `tests/acceptance/test_evolution_pipeline.py` |
+| SH-EVO-01 | evolution | IN_PROGRESS | `tests/acceptance/test_evolution_pipeline.py` drives failure history → collector fixtures → why-traceable Proposal/ChangeSet/Candidate against the public evolution surface; candidate/world registration stays Runtime-internal (RP-06), so the module also pins explicit NOT_FOUND refusals for unregistered references instead of fabricating registration |
+| SH-EVO-02 | evolution | IN_PROGRESS | `tests/contract/test_evolution_policy.py` pins bounded trigger windows/attempt budgets, no-promotion exits, clone isolation and refusal scenarios in development |
+| SH-GOV-01 | evolution | IN_PROGRESS | `tests/contract/test_evolution_governance.py` pins the frozen judge binding, signed composition authority and the permission/cross-package/stale-revision refusal matrix |
+| SH-GOV-02 | evolution | IN_PROGRESS | `tests/acceptance/test_evolution_release.py` pins operator-approved activation, drain of the frozen old version and traceable rollback; a fresh-observation rollback is admitted and committed immediately |
+| SH-EVO-03 | evolution-artifact | IN_PROGRESS | `tests/acceptance/test_evolution_tool_pipeline.py` drives the reachable artifact-candidate pipeline (failure-history trigger → whitelisted REPLACE_ARTIFACT/ADD_SLOT candidate with bound-in values and frozen criteria → deterministic preview) and honestly stops at the world gate with explicit refusals; promotion evidence is pending the Runtime-internal registration surface (RP-06) |
+| SH-EVO-04 | evolution-artifact | IN_PROGRESS | `tests/contract/test_evolution_artifact_policy.py` pins the bounded trigger policy (window/cooldown/count), artifact-kind whitelist and the INVALID path; the `cooldown_us` lower-bound and trace-shape tolerance observations are recorded, not repaired |
+| SH-GOV-03 | evolution-artifact | IN_PROGRESS | `tests/contract/test_evolution_artifact_governance.py` pins agent non-signing, artifact diff preview, old-value hash binding and evaluator independence |
+| SH-EVO-05 | evolution-code | IN_PROGRESS | `tests/acceptance/test_evolution_code_release.py` rehearses code candidate → new AMPAK version → S03 gates → signed activation → drain/rollback, including idempotent receipt replay of a frozen envelope after restart |
+| SH-GOV-04 | evolution-code | IN_PROGRESS | `tests/contract/test_evolution_code_governance.py` pins the non-exemptible gate, physical candidate-tree isolation, the daily budget under the frozen `CODE_BUDGET_CEILING` and the absence of a resident loop |
 
 Supplemental `tests/contract/test_session_repl.py` exercises the plan's step 4/5
 REPL front-end against a real daemon without changing the frozen proof paths:
@@ -64,11 +72,10 @@ round explains its reserved submit identity and journal entry, the lineage query
 moves the same message identity from pending to committed records, and an
 admission-refused round is durably committed with its FAILED terminal, zero
 invocations and a usable session afterwards.
-| SH-EVO-02 | evolution | PLANNED | `tests/contract/test_evolution_policy.py` |
-| SH-GOV-01 | evolution | PLANNED | `tests/contract/test_evolution_governance.py` |
-| SH-GOV-02 | evolution | PLANNED | `tests/acceptance/test_evolution_release.py` |
-| SH-EVO-03 | evolution-artifact | PLANNED | `tests/acceptance/test_evolution_tool_pipeline.py` |
-| SH-EVO-04 | evolution-artifact | PLANNED | `tests/contract/test_evolution_artifact_policy.py` |
-| SH-GOV-03 | evolution-artifact | PLANNED | `tests/contract/test_evolution_artifact_governance.py` |
-| SH-EVO-05 | evolution-code | PLANNED | `tests/acceptance/test_evolution_code_release.py` |
-| SH-GOV-04 | evolution-code | PLANNED | `tests/contract/test_evolution_code_governance.py` |
+
+The named S07–S09 evolution modules now pass as development proofs against the
+public wheel: bounded policies, governance refusal matrices, the artifact
+pipeline up to its reachable world gate, the conditional-revision/rollback
+governance matrix and the full code-release rehearsal. Their rows stay
+IN_PROGRESS: VERIFIED requires hash-bound consumer evidence from an approved
+publisher CI run, and the RP-06/RP-07 dependency rows remain open.
